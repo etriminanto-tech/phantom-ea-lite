@@ -26,9 +26,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ ok: false, error: "Interval not allowed" });
     }
     const limit = Math.min(200, Math.max(10, Number.parseInt(req.query.limit || "100", 10) || 100));
+    const endTime = Number.parseInt(req.query.endTime || "", 10);
+    if (req.query.endTime && (!Number.isSafeInteger(endTime) || endTime <= 0)) {
+      return res.status(400).json({ ok: false, error: "Invalid endTime" });
+    }
     path = "/api/v1/futures/market/kline";
     params.set("interval", interval);
     params.set("limit", String(limit));
+    if (Number.isSafeInteger(endTime) && endTime > 0) params.set("endTime", String(endTime));
   } else {
     return res.status(400).json({ ok: false, error: "Unknown market data type" });
   }
