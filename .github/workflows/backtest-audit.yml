@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Prepare report folder
+        run: mkdir -p audit-output
       - name: Run historical strategy audit
         run: node scripts/backtest-audit.mjs | tee audit-output/console.txt
       - name: Upload audit report
