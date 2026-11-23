@@ -17,3 +17,9 @@ Buka `index.html` melalui server HTTPS atau aktifkan GitHub Pages dari Settings 
 Semua transaksi yang dicatat di versi ini adalah simulasi lokal di browser. Data belum disimpan ke server dan dapat hilang ketika data browser dibersihkan. Jangan masukkan API key, password broker, seed phrase, atau recovery phrase.
 
 Integrasi Bitunix harus dibangun dan diuji pada demo/testnet terlebih dahulu dengan backend aman. Otomasi MetaTrader 5 memerlukan terminal MT5 desktop yang berjalan pada Windows/VPS; aplikasi MT5 Android tidak menjalankan Expert Advisor. Live trading tidak disediakan pada versi ini.
+
+## Deploy dengan Vercel untuk proxy API publik
+
+GitHub Pages hanya menyajikan file statis dan tidak menjalankan `api/market.js`. Untuk tombol harga Bitunix, impor repositori ini ke Vercel dan deploy sebagai project dari root repository. Vercel akan menjalankan fungsi serverless `/api/market` yang hanya meneruskan permintaan data publik ticker/kline dengan daftar simbol dan interval yang dibatasi. Fungsi ini tidak menerima API key dan tidak memiliki endpoint order.
+
+Setelah deploy, gunakan domain Vercel project sebagai alamat aplikasi. GitHub Pages tetap dapat dipakai untuk versi dashboard statis, tetapi tombol data pasar memerlukan domain Vercel.
