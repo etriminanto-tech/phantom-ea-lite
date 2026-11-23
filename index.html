@@ -22,7 +22,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:19px}header{padding:16px}.card{padding:13px}}
 </style></head>
 <body>
-<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.4</div></div><div class="tag">SIMULASI SAJA</div></header>
+<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.5</div></div><div class="tag">SIMULASI SAJA</div></header>
 <main>
 <div class="grid">
  <div class="card metric"><span>Modal awal</span><strong id="starting">50.00 USDT</strong></div>
@@ -40,6 +40,16 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="buttons"><button class="primary" id="load-market">Ambil harga pasar</button></div>
 <p class="note" id="market-time">Data belum diambil. Endpoint publik Bitunix; tidak memerlukan API key dan tidak mengirim order.</p>
 <p class="note">Harga pasar ini hanya untuk referensi BTCUSDT. Tidak digunakan otomatis untuk menghitung P/L transaksi simulasi dan bukan harga EURUSD/XAUUSD.</p>
+</section>
+<section class="card"><h2>Analisis EMA 9/21 — BTCUSDT</h2>
+<div class="row">
+ <div class="field"><label>Timeframe</label><strong>15 menit</strong></div>
+ <div class="field"><label>EMA 9</label><strong id="ema9">Belum dihitung</strong></div>
+ <div class="field"><label>EMA 21</label><strong id="ema21">Belum dihitung</strong></div>
+</div>
+<div class="row" style="margin-top:12px"><div class="field"><label>Kondisi strategi</label><strong id="ema-signal" class="muted">Menunggu data candle</strong></div><div class="field"><label>Jumlah candle</label><strong id="candle-count">0</strong></div></div>
+<div class="buttons"><button class="primary" id="load-ema">Ambil candle & hitung EMA</button></div>
+<p class="note" id="ema-time">Menggunakan candle 15 menit yang sudah ditutup dari Bitunix. Analisis informatif untuk simulasi; bukan sinyal terjamin dan tidak mengirim order.</p>
 </section>
 <section class="card"><h2>Catat transaksi simulasi</h2><div class="row">
  <div class="field"><label for="direction">Arah</label><select id="direction"><option>BUY</option><option>SELL</option></select></div>
@@ -61,6 +71,10 @@ $('clear').onclick=()=>{if(confirm('Hapus semua catatan simulasi di perangkat in
 $('capital').oninput=update;$('risk').oninput=update;$('symbol').onchange=save;restore();update();
 async function loadMarket(){const btn=$('load-market'),status=$('live-status'),price=$('live-price'),stamp=$('market-time');btn.disabled=true;status.textContent='Menghubungkan…';status.className='muted';try{const response=await fetch('/api/market?type=ticker&symbol=BTCUSDT',{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(!json.ok||!Array.isArray(json.data))throw new Error(json.error||'Format data tidak sesuai');const item=json.data.find(x=>x.symbol==='BTCUSDT');if(!item)throw new Error('BTCUSDT tidak ditemukan');const value=Number(item.lastPrice||item.last);if(!Number.isFinite(value)||value<=0)throw new Error('Harga tidak valid');price.textContent=value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' USDT';status.textContent='Terhubung';status.className='positive';stamp.textContent='Sumber: '+json.source+' • diperbarui '+new Date().toLocaleString('id-ID')}catch(e){status.textContent='Belum berhasil';status.className='negative';stamp.textContent='Gagal mengambil data: '+e.message+'. Pastikan aplikasi dibuka dari domain Vercel yang sudah diterbitkan; GitHub Pages tidak menjalankan fungsi server.'}finally{btn.disabled=false}}
 $('load-market').onclick=loadMarket;
+
+async function loadEma(){const btn=$('load-ema'),sig=$('ema-signal'),time=$('ema-time');btn.disabled=true;sig.textContent='Mengambil candle…';sig.className='muted';try{const response=await fetch('/api/market?type=kline&symbol=BTCUSDT&interval=15m&limit=100',{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(!json.ok||!Array.isArray(json.data))throw new Error(json.error||'Format candle tidak sesuai');const candles=json.data.filter(x=>Number.isFinite(Number(x.close))&&Number(x.time)).sort((a,b)=>Number(a.time)-Number(b.time));if(candles.length<22)throw new Error('Data candle kurang dari 22');const closes=candles.map(x=>Number(x.close));function emaSeries(values,period){const k=2/(period+1);let v=values.slice(0,period).reduce((a,b)=>a+b,0)/period;const out=Array(period-1).fill(null);out.push(v);for(let i=period;i<values.length;i++){v=values[i]*k+v*(1-k);out.push(v)}return out}const e9=emaSeries(closes,9),e21=emaSeries(closes,21),last=e9.length-1,prev=last-1;let label='Netral';let cls='muted';if(e9[prev]<=e21[prev]&&e9[last]>e21[last]){label='Persilangan bullish (EMA 9 naik di atas EMA 21)';cls='positive'}else if(e9[prev]>=e21[prev]&&e9[last]<e21[last]){label='Persilangan bearish (EMA 9 turun di bawah EMA 21)';cls='negative'}else if(e9[last]>e21[last]){label='Bullish — EMA 9 di atas EMA 21';cls='positive'}else if(e9[last]<e21[last]){label='Bearish — EMA 9 di bawah EMA 21';cls='negative'}$('ema9').textContent=e9[last].toLocaleString('en-US',{maximumFractionDigits:4});$('ema21').textContent=e21[last].toLocaleString('en-US',{maximumFractionDigits:4});sig.textContent=label;sig.className=cls;$('candle-count').textContent=candles.length+' candle';time.textContent='Sumber: '+json.source+' • Candle terakhir ditutup: '+new Date(Number(candles[last].time)).toLocaleString('id-ID')+' • '+new Date().toLocaleString('id-ID')}catch(e){sig.textContent='Analisis belum berhasil';sig.className='negative';time.textContent='Gagal mengambil candle: '+e.message}finally{btn.disabled=false}}
+$('load-ema').onclick=loadEma;
+
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
 </script></body></html>
