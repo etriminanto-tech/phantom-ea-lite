@@ -1,0 +1,27 @@
+name: Phantom EA strategy audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/backtest-audit.mjs"
+      - ".github/workflows/backtest-audit.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run historical strategy audit
+        run: node scripts/backtest-audit.mjs | tee audit-output/console.txt
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: phantom-ea-strategy-audit
+          path: audit-output/
+          retention-days: 14
