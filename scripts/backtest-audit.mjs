@@ -6,7 +6,7 @@ const TARGET = 5000;
 const FEE = 0.0006;
 const SLIPPAGE = 0.0002;
 const RISK = 0.01;
-const INTERVALS = ["15m", "1h"];
+const INTERVALS = ["5m", "15m", "1h"];
 
 async function candles(interval) {
   const all = new Map();
@@ -93,8 +93,11 @@ function simulate(c, ind, mode) {
     if(vals.some(x=>x===null||!Number.isFinite(x))){i++;continue;}
     const trendBuy=ind.e50[i]>ind.e200[i] && c[i].close>ind.e200[i];
     const trendSell=ind.e50[i]<ind.e200[i] && c[i].close<ind.e200[i];
-    const buy=ind.e9[i]>ind.e21[i]&&ind.rsi[i]>=52&&ind.rsi[i]<=68&&ind.m[i]>ind.sig[i]&&(mode==="baseline"||(mode==="trend"&&trendBuy)||(mode==="trend_adx"&&trendBuy&&ind.adx[i]>=20));
-    const sell=ind.e9[i]<ind.e21[i]&&ind.rsi[i]>=32&&ind.rsi[i]<=48&&ind.m[i]<ind.sig[i]&&(mode==="baseline"||(mode==="trend"&&trendSell)||(mode==="trend_adx"&&trendSell&&ind.adx[i]>=20));
+    const adxThreshold=mode.startsWith("trend_adx")?Number(mode.replace("trend_adx","")):0;
+    const trendOk=mode==="baseline"||(mode==="trend"&&trendBuy)||(mode.startsWith("trend_adx")&&trendBuy&&ind.adx[i]>=adxThreshold);
+    const trendSellOk=mode==="baseline"||(mode==="trend"&&trendSell)||(mode.startsWith("trend_adx")&&trendSell&&ind.adx[i]>=adxThreshold);
+    const buy=ind.e9[i]>ind.e21[i]&&ind.rsi[i]>=52&&ind.rsi[i]<=68&&ind.m[i]>ind.sig[i]&&trendOk;
+    const sell=ind.e9[i]<ind.e21[i]&&ind.rsi[i]>=32&&ind.rsi[i]<=48&&ind.m[i]<ind.sig[i]&&trendSellOk;
     if(!buy&&!sell){i++;continue;}
     const long=buy, rawEntry=c[i+1].open, stopDist=1.5*ind.atr[i];
     if(!(rawEntry>0&&stopDist>0)){i++;continue;}
@@ -122,7 +125,7 @@ for(const interval of INTERVALS){
   const c=await candles(interval);
   if(c.length<1000) throw new Error(`Only ${c.length} candles received for ${interval}`);
   const ind=indicators(c);
-  for(const mode of ["baseline","trend","trend_adx"]){
+  for(const mode of ["baseline","trend","trend_adx20","trend_adx25","trend_adx30"]){
     report.push({interval,candles:c.length,from:new Date(c[0].time).toISOString(),to:new Date(c.at(-1).time).toISOString(),mode,...simulate(c,ind,mode)});
   }
 }
@@ -135,7 +138,7 @@ const md=[
 "|---|---:|---|---:|---:|---:|---:|---:|---:|---:|",
 ...report.map(x=>`| ${x.interval} | ${x.candles} | ${x.mode} | ${x.trades} | ${x.winRate.toFixed(1)}% | ${x.netPnl.toFixed(2)} | ${x.endingEquity.toFixed(2)} | ${x.maxDrawdown.toFixed(2)}% | ${x.profitFactor.toFixed(2)} | ${x.costs.toFixed(2)} |`),
 "",
-"Variants: baseline = EMA 9/21 + RSI 14 + MACD; trend = baseline plus EMA 50/200 trend direction; trend_adx = trend plus ADX(14) >= 20. This is a historical screening test, not a guarantee or live-readiness certification."
+"Variants: baseline = EMA 9/21 + RSI 14 + MACD; trend = baseline plus EMA 50/200 trend direction; trend_adx20/25/30 = trend plus ADX(14) above the named threshold. This is a historical screening test, not a guarantee or live-readiness certification."
 ].join("\n");
 await fs.mkdir("audit-output",{recursive:true});
 await fs.writeFile("audit-output/report.json",JSON.stringify(report,null,2));
