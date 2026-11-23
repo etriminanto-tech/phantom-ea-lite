@@ -10,7 +10,7 @@
 header{padding:20px max(16px,calc((100vw - 960px)/2));border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
 h1{font-size:21px;margin:0}.sub,.muted,.note{color:var(--muted)}.sub{font-size:12px;margin-top:3px}
 .tag{font-size:11px;border:1px solid #806b3c;color:#ffdb91;padding:6px 10px;border-radius:99px}
-main{max-width:960px;margin:20px auto;padding:0 14px 38px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+main{max-width:960px;margin:20px auto;padding:0 14px 38px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin-top:12px}
 .metric span,label{display:block;font-size:12px;color:var(--muted)}.metric strong{display:block;font-size:22px;margin-top:7px}
 h2{font-size:16px;margin:0 0 14px}.row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.field{flex:1;min-width:125px}
@@ -22,11 +22,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:19px}header{padding:16px}.card{padding:13px}}
 </style></head>
 <body>
-<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.1</div></div><div class="tag">SIMULASI SAJA</div></header>
+<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.2</div></div><div class="tag">SIMULASI SAJA</div></header>
 <main>
 <div class="grid">
- <div class="card metric"><span>Modal simulasi</span><strong id="bal">50.00 USDT</strong></div>
+ <div class="card metric"><span>Modal awal</span><strong id="starting">50.00 USDT</strong></div>
  <div class="card metric"><span>Risiko per transaksi</span><strong id="riskamt">0.50 USDT</strong></div>
+ <div class="card metric"><span>Saldo berjalan</span><strong id="bal">50.00 USDT</strong></div>
  <div class="card metric"><span>Jumlah catatan</span><strong id="total">0</strong></div>
 </div>
 <section class="card"><h2>Pengaturan latihan</h2><div class="row">
@@ -44,11 +45,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <section class="card"><h2>Status integrasi</h2><p class="note">Bitunix: belum terhubung. MetaTrader 5: belum terhubung. Versi ini hanya dashboard simulasi lokal. Jangan masukkan API key, password, seed phrase, atau recovery phrase ke aplikasi.</p><p class="note">MT5 Expert Advisor membutuhkan terminal desktop Windows/VPS yang berjalan; aplikasi MT5 Android tidak menjalankan EA. Integrasi live hanya boleh dipertimbangkan setelah koneksi demo diuji dan backend aman tersedia.</p></section>
 </main>
 <script>
-(()=>{const $=id=>document.getElementById(id);let rows=[];
-function update(){const cap=Math.max(0,Number($('capital').value)||0),risk=Math.min(2,Math.max(.1,Number($('risk').value)||1));$('bal').textContent=cap.toFixed(2)+' USDT';$('riskamt').textContent=(cap*risk/100).toFixed(2)+' USDT';$('total').textContent=rows.length;const pnl=rows.reduce((s,r)=>s+r.pnl,0);$('sum').textContent='P/L: '+(pnl>0?'+':'')+pnl.toFixed(2)+' USDT';$('history').innerHTML=rows.length?rows.map(r=>'<tr><td>'+r.time+'</td><td>'+r.symbol+'</td><td>'+r.side+'</td><td>'+r.entry+'</td><td class="'+(r.pnl>=0?'positive':'negative')+'">'+(r.pnl>0?'+':'')+r.pnl.toFixed(2)+'</td></tr>').join(''):'<tr><td colspan="5" class="muted">Belum ada catatan.</td></tr>'}
-$('add').onclick=()=>{const pnl=Number($('result').value);if($('result').value.trim()===''||!Number.isFinite(pnl)){alert('Masukkan hasil transaksi dalam USDT.');return}rows.unshift({time:new Date().toLocaleString('id-ID'),symbol:$('symbol').value,side:$('direction').value,entry:$('entry').value||'-',pnl});$('result').value='';$('entry').value='';update()};
-$('clear').onclick=()=>{if(confirm('Hapus semua catatan simulasi?')){rows=[];update()}};
-$('capital').oninput=update;$('risk').oninput=update;update();
+(()=>{const $=id=>document.getElementById(id);const KEY='phantom-ea-lite-v02';let rows=[];
+function save(){try{localStorage.setItem(KEY,JSON.stringify({rows,capital:$('capital').value,risk:$('risk').value,symbol:$('symbol').value}))}catch(e){console.warn('Penyimpanan lokal tidak tersedia',e)}}
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function update(){const cap=Math.max(0,Number($('capital').value)||0),risk=Math.min(2,Math.max(.1,Number($('risk').value)||1)),pnl=rows.reduce((s,r)=>s+r.pnl,0);$('starting').textContent=cap.toFixed(2)+' USDT';$('bal').textContent=(cap+pnl).toFixed(2)+' USDT';$('riskamt').textContent=(cap*risk/100).toFixed(2)+' USDT';$('total').textContent=rows.length;$('sum').textContent='P/L: '+(pnl>0?'+':'')+pnl.toFixed(2)+' USDT';$('sum').className=pnl>=0?'positive':'negative';$('history').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.time)+'</td><td>'+esc(r.symbol)+'</td><td>'+esc(r.side)+'</td><td>'+esc(r.entry)+'</td><td class="'+(r.pnl>=0?'positive':'negative')+'">'+(r.pnl>0?'+':'')+r.pnl.toFixed(2)+'</td></tr>').join(''):'<tr><td colspan="5" class="muted">Belum ada catatan.</td></tr>';save()}
+function restore(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d){if(Array.isArray(d.rows))rows=d.rows.filter(r=>r&&Number.isFinite(Number(r.pnl))).map(r=>({...r,pnl:Number(r.pnl)}));if(d.capital)$('capital').value=d.capital;if(d.risk)$('risk').value=d.risk;if(d.symbol)$('symbol').value=d.symbol}}catch(e){console.warn('Data lokal tidak dapat dibaca',e)}}
+$('add').onclick=()=>{const pnl=Number($('result').value),entry=$('entry').value.trim();if($('result').value.trim()===''||!Number.isFinite(pnl)){alert('Masukkan hasil transaksi dalam USDT.');return}if(entry!==''&&(!Number.isFinite(Number(entry))||Number(entry)<=0)){alert('Harga masuk harus berupa angka lebih besar dari nol.');return}rows.unshift({time:new Date().toLocaleString('id-ID'),symbol:$('symbol').value,side:$('direction').value,entry:entry||'-',pnl});$('result').value='';$('entry').value='';update()};
+$('clear').onclick=()=>{if(confirm('Hapus semua catatan simulasi di perangkat ini?')){rows=[];update()}};
+$('capital').oninput=update;$('risk').oninput=update;$('symbol').onchange=save;restore();update();
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
-</script></body></html>
+</script></script></body></html>
