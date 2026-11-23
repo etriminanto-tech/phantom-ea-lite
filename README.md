@@ -2,13 +2,18 @@
 
 Dashboard PWA berbahasa Indonesia untuk latihan dan simulasi manajemen risiko.
 
-## Status rilis awal
+## Status rilis simulasi v1.1
 - Dashboard ramah Android.
 - Modal simulasi awal 50 USDT.
 - Risiko awal 1% per transaksi (batas simulasi 2%).
 - Instrumen latihan EURUSD, XAUUSD, BTCUSDT.
 - Pencatatan transaksi simulasi manual.
 - Tidak terhubung ke broker atau exchange dan tidak mengirim order.
+- Audit strategi otomatis tersedia melalui GitHub Actions.
+- Hasil audit terakhir: seluruh 15 kombinasi timeframe/varian menghasilkan P/L bersih negatif; varian terbaik adalah EMA 50/200 + ADX 25 pada 15m dengan hasil -1,80 USDT dan profit factor 0,93 dari modal 50 USDT.
+
+## Audit otomatis terakhir
+Laporan dijalankan pada 23 November 2026 dengan 5.000 candle untuk setiap timeframe (5m, 15m, 1h), risiko 1%, fee 0,06% dan slippage 0,02% per sisi. Hasil lengkap dan artefak: https://github.com/etriminanto-tech/phantom-ea-lite/actions/runs/45098396703
 
 ## Menjalankan
 Buka `index.html` melalui server HTTPS atau aktifkan GitHub Pages dari Settings → Pages → Deploy from a branch → main → /(root). Setelah situs aktif, buka URL Pages di Android Chrome dan pilih Tambahkan ke layar utama.
