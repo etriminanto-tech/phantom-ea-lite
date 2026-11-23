@@ -22,7 +22,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:19px}header{padding:16px}.card{padding:13px}}
 </style></head>
 <body>
-<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.6</div></div><div class="tag">SIMULASI SAJA</div></header>
+<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.7</div></div><div class="tag">SIMULASI SAJA</div></header>
 <main>
 <div class="grid">
  <div class="card metric"><span>Modal awal</span><strong id="starting">50.00 USDT</strong></div>
@@ -60,6 +60,24 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="buttons"><button class="primary" id="load-ema">Ambil candle & hitung EMA</button></div>
 <p class="note" id="ema-time">Menggunakan candle 15 menit yang sudah ditutup dari Bitunix. Analisis informatif untuk simulasi; bukan sinyal terjamin dan tidak mengirim order.</p>
 </section>
+<section class="card"><h2>Kalkulator Stop Loss & Take Profit — BTCUSDT</h2>
+<p class="note">Kalkulator simulasi untuk kontrak linear BTCUSDT. Risiko dihitung dari modal dan persentase risiko; hasil bukan order dan belum memperhitungkan biaya, funding, slippage, atau leverage.</p>
+<div class="row">
+ <div class="field"><label for="calc-side">Arah posisi</label><select id="calc-side"><option value="BUY">BUY / Long</option><option value="SELL">SELL / Short</option></select></div>
+ <div class="field"><label for="calc-entry">Harga entry (USDT)</label><input id="calc-entry" type="number" step="any" placeholder="Contoh: 61000"></div>
+ <div class="field"><label for="calc-sl">Harga Stop Loss</label><input id="calc-sl" type="number" step="any" placeholder="Contoh: 60500"></div>
+ <div class="field"><label for="calc-tp">Harga Take Profit</label><input id="calc-tp" type="number" step="any" placeholder="Contoh: 62000"></div>
+</div>
+<div class="buttons"><button class="primary" id="calc-run">Hitung ukuran posisi</button></div>
+<div class="row" style="margin-top:12px">
+ <div class="field"><label>Risiko nominal</label><strong id="calc-risk">—</strong></div>
+ <div class="field"><label>Jarak Stop Loss</label><strong id="calc-distance">—</strong></div>
+ <div class="field"><label>Ukuran posisi (BTC)</label><strong id="calc-qty">—</strong></div>
+ <div class="field"><label>Nilai posisi (USDT)</label><strong id="calc-notional">—</strong></div>
+ <div class="field"><label>Risk : Reward</label><strong id="calc-rr">—</strong></div>
+</div>
+<p class="note" id="calc-note">Masukkan entry, Stop Loss, dan Take Profit untuk menghitung. Pastikan SL berada di sisi yang benar dari harga entry.</p>
+</section>
 <section class="card"><h2>Catat transaksi simulasi</h2><div class="row">
  <div class="field"><label for="direction">Arah</label><select id="direction"><option>BUY</option><option>SELL</option></select></div>
  <div class="field"><label for="entry">Harga masuk (opsional)</label><input id="entry" type="number" step="any" placeholder="Contoh: 1.08500"></div>
@@ -90,6 +108,18 @@ $('macd-line').textContent=macdLine.toFixed(4);$('macd-signal').textContent=macd
 let momentum='Netral';let momentumClass='muted';if(rsiValue>=70){momentum='RSI tinggi (≥70)';momentumClass='negative'}else if(rsiValue<=30){momentum='RSI rendah (≤30)';momentumClass='positive'}else if(hist>0){momentum='Momentum positif';momentumClass='positive'}else if(hist<0){momentum='Momentum negatif';momentumClass='negative'}$('momentum').textContent=momentum;$('momentum').className=momentumClass;
 let label='Netral';let cls='muted';if(e9[prev]<=e21[prev]&&e9[last]>e21[last]){label='Persilangan bullish (EMA 9 naik di atas EMA 21)';cls='positive'}else if(e9[prev]>=e21[prev]&&e9[last]<e21[last]){label='Persilangan bearish (EMA 9 turun di bawah EMA 21)';cls='negative'}else if(e9[last]>e21[last]){label='Bullish — EMA 9 di atas EMA 21';cls='positive'}else if(e9[last]<e21[last]){label='Bearish — EMA 9 di bawah EMA 21';cls='negative'}$('ema9').textContent=e9[last].toLocaleString('en-US',{maximumFractionDigits:4});$('ema21').textContent=e21[last].toLocaleString('en-US',{maximumFractionDigits:4});sig.textContent=label;sig.className=cls;$('candle-count').textContent=candles.length+' candle';time.textContent='Sumber: '+json.source+' • Candle terakhir ditutup: '+new Date(Number(candles[last].time)).toLocaleString('id-ID')+' • '+new Date().toLocaleString('id-ID')}catch(e){sig.textContent='Analisis belum berhasil';sig.className='negative';time.textContent='Gagal mengambil candle: '+e.message}finally{btn.disabled=false}}
 $('load-ema').onclick=loadEma;
+function calcPosition(){const side=$('calc-side').value,entry=Number($('calc-entry').value),sl=Number($('calc-sl').value),tp=Number($('calc-tp').value),capital=Math.max(0,Number($('capital').value)||0),riskPct=Math.min(2,Math.max(.1,Number($('risk').value)||1)),risk=capital*riskPct/100;
+const ids=['calc-risk','calc-distance','calc-qty','calc-notional','calc-rr'];ids.forEach(id=>$(id).textContent='—');
+const note=$('calc-note');note.className='note';
+if(![entry,sl,tp].every(v=>Number.isFinite(v)&&v>0)){note.textContent='Isi ketiga harga dengan angka lebih besar dari nol.';return}
+const valid=side==='BUY'?(sl<entry&&tp>entry):(sl>entry&&tp<entry);
+if(!valid){note.textContent='Harga tidak sesuai arah posisi. BUY: SL < entry < TP. SELL: TP < entry < SL.';note.className='note negative';return}
+const stopDist=Math.abs(entry-sl),targetDist=Math.abs(tp-entry),qty=risk/stopDist,notional=qty*entry,rr=targetDist/stopDist;
+$('calc-risk').textContent=risk.toFixed(2)+' USDT';$('calc-distance').textContent=stopDist.toFixed(2)+' USDT';$('calc-qty').textContent=qty.toFixed(8)+' BTC';$('calc-notional').textContent=notional.toFixed(2)+' USDT';$('calc-rr').textContent='1 : '+rr.toFixed(2);
+note.textContent='Perkiraan ukuran posisi untuk risiko '+risk.toFixed(2)+' USDT. Nilai ini belum termasuk biaya, funding, slippage, aturan minimum kontrak, atau kebutuhan margin. Jangan gunakan sebagai order live.'}
+$('calc-run').onclick=calcPosition;
+$('capital').addEventListener('input',()=>{if($('calc-entry').value&&$('calc-sl').value&&$('calc-tp').value)calcPosition()});
+$('risk').addEventListener('input',()=>{if($('calc-entry').value&&$('calc-sl').value&&$('calc-tp').value)calcPosition()});
 
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
