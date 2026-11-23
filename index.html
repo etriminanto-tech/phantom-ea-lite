@@ -22,7 +22,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:19px}header{padding:16px}.card{padding:13px}}
 </style></head>
 <body>
-<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.8</div></div><div class="tag">SIMULASI SAJA</div></header>
+<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.9</div></div><div class="tag">SIMULASI SAJA</div></header>
 <main>
 <div class="grid">
  <div class="card metric"><span>Modal awal</span><strong id="starting">50.00 USDT</strong></div>
@@ -65,6 +65,25 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </div>
 <div class="buttons"><button class="primary" id="load-ema">Ambil candle & hitung EMA</button></div>
 <p class="note" id="ema-time">Menggunakan candle 15 menit yang sudah ditutup dari Bitunix. Analisis informatif untuk simulasi; bukan sinyal terjamin dan tidak mengirim order.</p>
+</section>
+<section class="card"><h2>Backtesting strategi — BTCUSDT 15 menit</h2>
+<p class="note">Uji historis pada maksimum 200 candle tertutup yang tersedia (sekitar 50 jam data 15 menit). Entry dilakukan pada open candle setelah sinyal. Stop Loss = 1,5 × ATR(14), Take Profit = 2R. Jika SL dan TP tersentuh dalam candle yang sama, simulasi menganggap SL terjadi lebih dahulu (asumsi konservatif). Biaya, funding, slippage, spread, dan leverage belum dihitung.</p>
+<div class="row">
+ <div class="field"><label>Modal awal (USDT)</label><strong id="bt-capital">50.00 USDT</strong></div>
+ <div class="field"><label>Risiko tiap transaksi</label><strong id="bt-risk">1%</strong></div>
+ <div class="field"><label>Data diuji</label><strong id="bt-candles">Belum diuji</strong></div>
+</div>
+<div class="buttons"><button class="primary" id="run-backtest">Jalankan backtest 200 candle</button></div>
+<div class="grid" style="margin-top:12px">
+ <div class="card metric"><span>Jumlah transaksi</span><strong id="bt-trades">—</strong></div>
+ <div class="card metric"><span>Win rate</span><strong id="bt-winrate">—</strong></div>
+ <div class="card metric"><span>Total P/L</span><strong id="bt-pnl">—</strong></div>
+ <div class="card metric"><span>Saldo akhir</span><strong id="bt-equity">—</strong></div>
+ <div class="card metric"><span>Max drawdown</span><strong id="bt-dd">—</strong></div>
+ <div class="card metric"><span>Profit factor</span><strong id="bt-pf">—</strong></div>
+</div>
+<p class="note" id="bt-status">Backtest belum dijalankan. Hasil historis singkat tidak menjamin performa masa depan.</p>
+<div id="bt-history-wrap" style="overflow-x:auto;display:none"><table><thead><tr><th>Waktu entry</th><th>Arah</th><th>Entry</th><th>Exit</th><th>Hasil</th></tr></thead><tbody id="bt-history"></tbody></table></div>
 </section>
 <section class="card"><h2>Kalkulator Stop Loss & Take Profit — BTCUSDT</h2>
 <p class="note">Kalkulator simulasi untuk kontrak linear BTCUSDT. Risiko dihitung dari modal dan persentase risiko; hasil bukan order dan belum memperhitungkan biaya, funding, slippage, atau leverage.</p>
@@ -122,6 +141,34 @@ else{reason='Belum ada keselarasan penuh. BUY '+buyCount+'/3 kondisi; SELL '+sel
 $('auto-signal').textContent=decision;$('auto-signal').className=decisionClass;$('signal-count').textContent=Math.max(buyCount,sellCount)+'/3 kondisi';$('signal-reason').textContent=reason;
 let label='Netral';let cls='muted';if(e9[prev]<=e21[prev]&&e9[last]>e21[last]){label='Persilangan bullish (EMA 9 naik di atas EMA 21)';cls='positive'}else if(e9[prev]>=e21[prev]&&e9[last]<e21[last]){label='Persilangan bearish (EMA 9 turun di bawah EMA 21)';cls='negative'}else if(e9[last]>e21[last]){label='Bullish — EMA 9 di atas EMA 21';cls='positive'}else if(e9[last]<e21[last]){label='Bearish — EMA 9 di bawah EMA 21';cls='negative'}$('ema9').textContent=e9[last].toLocaleString('en-US',{maximumFractionDigits:4});$('ema21').textContent=e21[last].toLocaleString('en-US',{maximumFractionDigits:4});sig.textContent=label;sig.className=cls;$('candle-count').textContent=candles.length+' candle';time.textContent='Sumber: '+json.source+' • Candle terakhir ditutup: '+new Date(Number(candles[last].time)).toLocaleString('id-ID')+' • '+new Date().toLocaleString('id-ID')}catch(e){sig.textContent='Analisis belum berhasil';sig.className='negative';time.textContent='Gagal mengambil candle: '+e.message}finally{btn.disabled=false}}
 $('load-ema').onclick=loadEma;
+async function runBacktest(){const btn=$('run-backtest'),status=$('bt-status');btn.disabled=true;status.textContent='Mengambil data candle dan menjalankan simulasi…';status.className='note';try{
+ const response=await fetch('/api/market?type=kline&symbol=BTCUSDT&interval=15m&limit=200',{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(!json.ok||!Array.isArray(json.data))throw new Error(json.error||'Format candle tidak sesuai');
+ const candles=json.data.filter(c=>['open','high','low','close','time'].every(k=>Number.isFinite(Number(c[k])))).sort((a,b)=>Number(a.time)-Number(b.time));
+ if(candles.length<60)throw new Error('Minimal 60 candle valid diperlukan; diterima '+candles.length);
+ const n=candles.length,closes=candles.map(c=>Number(c.close)),highs=candles.map(c=>Number(c.high)),lows=candles.map(c=>Number(c.low));
+ function ema(values,p){const k=2/(p+1),out=Array(values.length).fill(null);if(values.length<p)return out;let v=values.slice(0,p).reduce((a,b)=>a+b,0)/p;out[p-1]=v;for(let i=p;i<values.length;i++){v=values[i]*k+v*(1-k);out[i]=v}return out}
+ function rsiSeries(values,p){const out=Array(values.length).fill(null);if(values.length<=p)return out;let g=0,l=0;for(let i=1;i<=p;i++){const d=values[i]-values[i-1];g+=Math.max(d,0);l+=Math.max(-d,0)}let ag=g/p,al=l/p;out[p]=al===0?100:100-100/(1+ag/al);for(let i=p+1;i<values.length;i++){const d=values[i]-values[i-1];ag=(ag*(p-1)+Math.max(d,0))/p;al=(al*(p-1)+Math.max(-d,0))/p;out[i]=al===0?100:100-100/(1+ag/al)}return out}
+ const e9=ema(closes,9),e21=ema(closes,21),e12=ema(closes,12),e26=ema(closes,26),macd=closes.map((_,i)=>e12[i]===null||e26[i]===null?null:e12[i]-e26[i]),macdVals=macd.filter(v=>v!==null),sigVals=ema(macdVals,9),signal=Array(n).fill(null);let k=0;for(let i=0;i<n;i++)if(macd[i]!==null)signal[i]=sigVals[k++];
+ const rsis=rsiSeries(closes,14),atr=Array(n).fill(null);let trSum=0;for(let i=0;i<n;i++){const prev=i?closes[i-1]:closes[i],tr=Math.max(highs[i]-lows[i],Math.abs(highs[i]-prev),Math.abs(lows[i]-prev));if(i<14){trSum+=tr;if(i===13)atr[i]=trSum/14}else atr[i]=(atr[i-1]*13+tr)/14}
+ let equity=Math.max(1,Number($('capital').value)||50),peak=equity,maxDD=0,grossWin=0,grossLoss=0,wins=0,losses=0,tradeList=[],i=40;
+ const riskPct=Math.min(2,Math.max(.1,Number($('risk').value)||1))/100;
+ while(i<n-1&&equity>0){const valid=[e9[i],e21[i],rsis[i],macd[i],signal[i],atr[i]].every(v=>v!==null&&Number.isFinite(v));if(!valid){i++;continue}
+ const buy=e9[i]>e21[i]&&rsis[i]>50&&rsis[i]<70&&macd[i]>signal[i],sell=e9[i]<e21[i]&&rsis[i]<50&&rsis[i]>30&&macd[i]<signal[i];
+ if(!buy&&!sell){i++;continue}
+ const side=buy?'BUY':'SELL',entry=Number(candles[i+1].open),dist=atr[i]*1.5;if(!(entry>0&&dist>0)){i++;continue}
+ const sl=buy?entry-dist:entry+dist,tp=buy?entry+dist*2:entry-dist*2,riskMoney=equity*riskPct,qty=riskMoney/dist;
+ let exit=Number(candles[n-1].close),exitIndex=n-1,reason='Akhir data';
+ for(let j=i+1;j<n;j++){const hi=highs[j],lo=lows[j];if(buy){const hitSL=lo<=sl,hitTP=hi>=tp;if(hitSL||hitTP){if(hitSL){exit=sl;reason=hitTP?'SL (SL & TP satu candle)':'SL'}else{exit=tp;reason='TP'}exitIndex=j;break}}else{const hitSL=hi>=sl,hitTP=lo<=tp;if(hitSL||hitTP){if(hitSL){exit=sl;reason=hitTP?'SL (SL & TP satu candle)':'SL'}else{exit=tp;reason='TP'}exitIndex=j;break}}}
+ const pnl=(buy?exit-entry:entry-exit)*qty;equity+=pnl;peak=Math.max(peak,equity);maxDD=Math.max(maxDD,(peak-equity)/peak*100);if(pnl>0){wins++;grossWin+=pnl}else{losses++;grossLoss+=Math.abs(pnl)}
+ tradeList.push({time:new Date(Number(candles[i+1].time)).toLocaleString('id-ID'),side,entry,exit,pnl,reason});i=Math.max(i+1,exitIndex+1);
+ }
+ const total=tradeList.length,net=equity-(Math.max(1,Number($('capital').value)||50)),winRate=total?wins/total*100:0,pf=grossLoss?grossWin/grossLoss:(grossWin?Infinity:0);
+ $('bt-capital').textContent=(Number($('capital').value)||50).toFixed(2)+' USDT';$('bt-risk').textContent=(riskPct*100).toFixed(1)+'%';$('bt-candles').textContent=n+' candle';
+ $('bt-trades').textContent=total;$('bt-winrate').textContent=winRate.toFixed(1)+'%';$('bt-pnl').textContent=(net>=0?'+':'')+net.toFixed(2)+' USDT';$('bt-pnl').className=net>=0?'positive':'negative';$('bt-equity').textContent=equity.toFixed(2)+' USDT';$('bt-dd').textContent=maxDD.toFixed(2)+'%';$('bt-pf').textContent=Number.isFinite(pf)?pf.toFixed(2):(grossWin?'∞':'0.00');
+ $('bt-history-wrap').style.display=total?'block':'none';$('bt-history').innerHTML=tradeList.slice(-10).reverse().map(t=>'<tr><td>'+t.time+'</td><td>'+t.side+'</td><td>'+t.entry.toFixed(2)+'</td><td>'+t.exit.toFixed(2)+'</td><td class="'+(t.pnl>=0?'positive':'negative')+'">'+(t.pnl>=0?'+':'')+t.pnl.toFixed(3)+'<br><small>'+t.reason+'</small></td></tr>').join('');
+ status.textContent='Selesai • '+json.source+' • '+n+' candle 15 menit • '+new Date(Number(candles[0].time)).toLocaleString('id-ID')+' sampai '+new Date(Number(candles[n-1].time)).toLocaleString('id-ID')+'. Tidak termasuk biaya, funding, spread, slippage, leverage, dan pembulatan kontrak. Hasil ini simulasi historis, bukan jaminan.';status.className='note';
+ }catch(e){status.textContent='Backtest gagal: '+e.message;status.className='note negative'}finally{btn.disabled=false}}
+$('run-backtest').onclick=runBacktest;
 function calcPosition(){const side=$('calc-side').value,entry=Number($('calc-entry').value),sl=Number($('calc-sl').value),tp=Number($('calc-tp').value),capital=Math.max(0,Number($('capital').value)||0),riskPct=Math.min(2,Math.max(.1,Number($('risk').value)||1)),risk=capital*riskPct/100;
 const ids=['calc-risk','calc-distance','calc-qty','calc-notional','calc-rr'];ids.forEach(id=>$(id).textContent='—');
 const note=$('calc-note');note.className='note';
