@@ -160,6 +160,10 @@ a{color:#8ebaff}
 </div><div class="buttons"><button class="primary" id="add">Simpan catatan</button><button id="clear">Hapus riwayat</button></div><p class="note">Masukkan hasil transaksi latihan secara manual. Aplikasi dapat membaca harga dan candle publik BTCUSDT dari Bitunix, tetapi tidak menghubungkan akun dan tidak mengirim order.</p></section>
 <section class="card"><div class="row" style="justify-content:space-between"><h2>Riwayat simulasi</h2><span class="muted" id="sum">P/L: 0.00 USDT</span></div>
 <div id="history-wrap"><table><thead><tr><th>Waktu</th><th>Instrumen</th><th>Arah</th><th>Harga masuk</th><th>Hasil</th></tr></thead><tbody id="history"><tr><td colspan="5" class="muted">Belum ada catatan.</td></tr></tbody></table></div></section>
+<section class="card"><h2>Cadangan & pemulihan data</h2>
+<p class="note">Riwayat transaksi simulasi dan pengaturan saat ini disimpan di perangkat ini. Buat file cadangan sebelum mengganti HP atau membersihkan data browser. File cadangan berisi catatan simulasi dan pengaturan, bukan kata sandi atau API key.</p>
+<div class="buttons"><button class="primary" id="export-backup" type="button">Unduh cadangan</button><button id="import-backup" type="button">Pulihkan cadangan</button><input id="backup-file" type="file" accept="application/json,.json" hidden></div>
+<p class="note" id="backup-status" aria-live="polite">Cadangan belum dibuat.</p></section>
 <section class="card"><h2>Status integrasi</h2><p class="note">Bitunix: belum terhubung. MetaTrader 5: belum terhubung. Aplikasi sudah mengambil data publik Bitunix secara read-only melalui backend Vercel. Akun trading belum dihubungkan dan tidak ada order yang dikirim. Catatan simulasi masih tersimpan lokal di perangkat. Jangan masukkan API key, password, seed phrase, atau recovery phrase ke aplikasi.</p><p class="note">MT5 Expert Advisor membutuhkan terminal desktop Windows/VPS yang berjalan; aplikasi MT5 Android tidak menjalankan EA. Integrasi live hanya boleh dipertimbangkan setelah koneksi demo diuji dan backend aman tersedia.</p></section>
 </main>
 <script>
@@ -245,6 +249,44 @@ async function runBacktest(){const btn=$('run-backtest'),status=$('bt-status');b
  $('bt-status').textContent='Selesai • '+'Bitunix Futures public API'+' • '+n+' candle '+interval+' • '+pages+' permintaan • '+new Date(Number(candles[0].time)).toLocaleString('id-ID')+' sampai '+new Date(Number(candles[n-1].time)).toLocaleString('id-ID')+'. Biaya dan slippage per sisi diterapkan pada entry/exit. Funding, spread tambahan, leverage, dan aturan minimum kontrak belum dimodelkan. Hasil historis bukan jaminan.';$('bt-status').className='note';
  }catch(e){status.textContent='Backtest gagal: '+e.message;status.className='note negative'}finally{btn.disabled=false}}
 $('run-backtest').onclick=runBacktest;
+function exportBackup(){
+ const payload={app:"Phantom EA Lite",schema:1,exportedAt:new Date().toISOString(),settings:{capital:$('capital').value,risk:$('risk').value,symbol:$('symbol').value},rows};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='phantom-ea-lite-backup-'+new Date().toISOString().slice(0,10)+'.json';
+ document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+ $('backup-status').textContent='Cadangan berhasil disiapkan untuk diunduh • '+rows.length+' catatan simulasi.';
+}
+function importBackup(file){
+ if(!file)return;
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const data=JSON.parse(String(reader.result||''));
+   if(!data||data.app!=="Phantom EA Lite"||data.schema!==1||!Array.isArray(data.rows)||data.rows.length>10000)throw new Error('Format cadangan tidak dikenali atau jumlah catatan terlalu besar.');
+   const safeRows=data.rows.map(r=>{
+    if(!r||typeof r!=='object'||!Number.isFinite(Number(r.pnl)))throw new Error('Ada catatan dengan hasil transaksi tidak valid.');
+    const side=r.side==='SELL'?'SELL':'BUY',symbol=['EURUSD','XAUUSD','BTCUSDT'].includes(r.symbol)?r.symbol:'BTCUSDT';
+    const pnl=Number(r.pnl);if(Math.abs(pnl)>10000000)throw new Error('Nilai transaksi di luar batas yang diizinkan.');
+    return {time:String(r.time||'Impor').slice(0,80),symbol,side,entry:String(r.entry||'-').slice(0,40),pnl};
+   });
+   if(!confirm('Pulihkan '+safeRows.length+' catatan? Riwayat yang saat ini ada di perangkat akan diganti.'))return;
+   rows=safeRows;
+   if(data.settings&&typeof data.settings==='object'){
+    const cap=Number(data.settings.capital),risk=Number(data.settings.risk);
+    if(Number.isFinite(cap)&&cap>=1&&cap<=1000000)$('capital').value=String(cap);
+    if(Number.isFinite(risk)&&risk>=.1&&risk<=2)$('risk').value=String(risk);
+    if(['EURUSD','XAUUSD','BTCUSDT'].includes(data.settings.symbol))$('symbol').value=data.settings.symbol;
+   }
+   update();$('backup-status').textContent='Pemulihan berhasil • '+rows.length+' catatan dimuat.';
+  }catch(e){$('backup-status').textContent='Pemulihan gagal: '+e.message}
+ };
+ reader.onerror=()=>{$('backup-status').textContent='File cadangan tidak dapat dibaca.'};
+ reader.readAsText(file);
+}
+$('export-backup').addEventListener('click',exportBackup);
+$('import-backup').addEventListener('click',()=>$('backup-file').click());
+$('backup-file').addEventListener('change',event=>{importBackup(event.target.files&&event.target.files[0]);event.target.value=''});
 function calcPosition(){const side=$('calc-side').value,entry=Number($('calc-entry').value),sl=Number($('calc-sl').value),tp=Number($('calc-tp').value),capital=Math.max(0,Number($('capital').value)||0),riskPct=Math.min(2,Math.max(.1,Number($('risk').value)||1)),risk=capital*riskPct/100;
 const ids=['calc-risk','calc-distance','calc-qty','calc-notional','calc-rr'];ids.forEach(id=>$(id).textContent='—');
 const note=$('calc-note');note.className='note';
