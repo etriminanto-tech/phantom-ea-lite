@@ -22,7 +22,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:19px}header{padding:16px}.card{padding:13px}}
 </style></head>
 <body>
-<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 1.0</div></div><div class="tag">SIMULASI SAJA</div></header>
+<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 1.1</div></div><div class="tag">SIMULASI SAJA</div></header>
 <main>
 <div class="grid">
  <div class="card metric"><span>Modal awal</span><strong id="starting">50.00 USDT</strong></div>
@@ -30,6 +30,16 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
  <div class="card metric"><span>Saldo berjalan</span><strong id="bal">50.00 USDT</strong></div>
  <div class="card metric"><span>Jumlah catatan</span><strong id="total">0</strong></div>
 </div>
+<section class="card" style="margin-top:14px">
+<h2>Status strategi & hasil audit otomatis</h2>
+<div class="row">
+ <div class="field"><label>Hasil audit terakhir</label><strong class="negative">Belum lolos profitabilitas</strong></div>
+ <div class="field"><label>Varian terbaik dalam sampel</label><strong>EMA 50/200 + ADX 25</strong></div>
+ <div class="field"><label>Hasil 15 menit</label><strong class="negative">-1,80 USDT</strong></div>
+</div>
+<p class="note">Audit 5.000 candle BTCUSDT per timeframe (5m, 15m, 1h), modal 50 USDT, risiko 1%, fee 0,06% dan slippage 0,02% per sisi. Varian terbaik tetap rugi bersih dan profit factor 0,93. Semua strategi tetap SIMULASI; tidak ada order otomatis ke broker.</p>
+<p class="note"><a href="https://github.com/etriminanto-tech/phantom-ea-lite/actions/runs/45098396703" target="_blank" rel="noopener">Lihat laporan audit otomatis di GitHub</a></p>
+</section>
 <section class="card"><h2>Pengaturan latihan</h2><div class="row">
  <div class="field"><label for="symbol">Instrumen</label><select id="symbol"><option>EURUSD</option><option>XAUUSD</option><option>BTCUSDT</option></select></div>
  <div class="field"><label for="capital">Modal (USDT)</label><input id="capital" type="number" min="1" max="1000000" value="50"></div>
