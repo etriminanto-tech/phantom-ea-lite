@@ -24,7 +24,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <style>
 :root{--bg:#080e19;--panel:#101a2b;--line:#23334a;--muted:#8ea2bd;--text:#edf4ff;--blue:#4e8cff;--green:#29d39a;--red:#ff7185}
 body{background:radial-gradient(ellipse at 50% -20%,#1c3c67 0%,#0b1424 46%,#070c15 100%);padding-bottom:88px}
-header{position:sticky;top:0;z-index:20;background:rgba(8,14,25,.92);backdrop-filter:blur(16px);border-bottom:1px solid #263750;padding:14px max(16px,calc((100vw - 960px)/2))}
+#install-app[hidden]{display:none}#install-app{white-space:nowrap}\nheader{position:sticky;top:0;z-index:20;background:rgba(8,14,25,.92);backdrop-filter:blur(16px);border-bottom:1px solid #263750;padding:14px max(16px,calc((100vw - 960px)/2))}
 h1{font-size:20px;letter-spacing:.2px}.sub{letter-spacing:.3px}
 .tag{background:#302716;border-color:#8a6b35;color:#ffd88b;font-weight:700;letter-spacing:.5px}
 main{margin:16px auto;max-width:900px}
@@ -49,7 +49,7 @@ a{color:#8ebaff}
 @media(max-width:560px){header{padding:13px 15px}.card{padding:14px}.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}main{padding:0 12px 24px}}
 </style></head>
 <body>
-<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 1.1</div></div><div class="tag">SIMULASI SAJA</div></header><nav id="app-nav" aria-label="Navigasi utama">
+<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 1.1</div></div><div style="display:flex;align-items:center;gap:8px"><div class="tag">SIMULASI SAJA</div><button id="install-app" type="button" hidden style="width:auto;margin:0;padding:8px 11px;font-size:12px;background:#2455ad;border-color:#4b8ef8">Instal aplikasi</button></div></header><nav id="app-nav" aria-label="Navigasi utama">
 <button type="button" data-go="dashboard" class="active"><span class="nav-icon">⌂</span><span class="nav-label">Beranda</span></button>
 <button type="button" data-go="market"><span class="nav-icon">▥</span><span class="nav-label">Pasar</span></button>
 <button type="button" data-go="strategy"><span class="nav-icon">⌁</span><span class="nav-label">Strategi</span></button>
@@ -258,6 +258,10 @@ $('calc-run').onclick=calcPosition;
 $('capital').addEventListener('input',()=>{if($('calc-entry').value&&$('calc-sl').value&&$('calc-tp').value)calcPosition()});
 $('risk').addEventListener('input',()=>{if($('calc-entry').value&&$('calc-sl').value&&$('calc-tp').value)calcPosition()});
 
+let installPrompt=null;const installButton=$('install-app');
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;installButton.hidden=false});
+installButton.addEventListener('click',async()=>{if(!installPrompt){alert('Jika tombol instal belum tersedia, buka menu Chrome ⋮ lalu pilih Tambahkan ke layar utama atau Instal aplikasi.');return}installPrompt.prompt();const choice=await installPrompt.userChoice;if(choice&&choice.outcome==='accepted')installButton.hidden=true;installPrompt=null});
+window.addEventListener('appinstalled',()=>{installButton.hidden=true;installPrompt=null});
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
 </script></body></html>
