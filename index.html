@@ -22,7 +22,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:19px}header{padding:16px}.card{padding:13px}}
 </style></head>
 <body>
-<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.7</div></div><div class="tag">SIMULASI SAJA</div></header>
+<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 0.8</div></div><div class="tag">SIMULASI SAJA</div></header>
 <main>
 <div class="grid">
  <div class="card metric"><span>Modal awal</span><strong id="starting">50.00 USDT</strong></div>
@@ -56,6 +56,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="row" style="margin-top:12px">
  <div class="field"><label>Histogram MACD</label><strong id="macd-hist">Belum dihitung</strong></div>
  <div class="field"><label>Interpretasi momentum</label><strong id="momentum" class="muted">Menunggu data</strong></div>
+</div>
+<div class="card" style="margin-top:14px;background:#0d1929">
+ <h2>Sinyal strategi otomatis (simulasi)</h2>
+ <div class="row"><div class="field"><label>Keputusan</label><strong id="auto-signal" class="muted">Menunggu analisis</strong></div><div class="field"><label>Konfirmasi</label><strong id="signal-count">0/3 kondisi</strong></div></div>
+ <p class="note" id="signal-reason">Tekan Ambil candle & hitung EMA untuk mengevaluasi aturan.</p>
+ <p class="note">Aturan BUY: EMA 9 &gt; EMA 21, RSI 50–70, MACD &gt; Signal. Aturan SELL: EMA 9 &lt; EMA 21, RSI 30–50, MACD &lt; Signal. Selain itu NO TRADE. Sinyal hanya evaluasi candle tertutup, bukan order.</p>
 </div>
 <div class="buttons"><button class="primary" id="load-ema">Ambil candle & hitung EMA</button></div>
 <p class="note" id="ema-time">Menggunakan candle 15 menit yang sudah ditutup dari Bitunix. Analisis informatif untuk simulasi; bukan sinyal terjamin dan tidak mengirim order.</p>
@@ -106,6 +112,14 @@ const validMacd=macd.filter(v=>v!==null);const signalValid=emaSeries(validMacd,9
 $('rsi14').textContent=rsiValue===null?'Data kurang':rsiValue.toFixed(2);
 $('macd-line').textContent=macdLine.toFixed(4);$('macd-signal').textContent=macdSignal.toFixed(4);$('macd-hist').textContent=hist.toFixed(4);
 let momentum='Netral';let momentumClass='muted';if(rsiValue>=70){momentum='RSI tinggi (≥70)';momentumClass='negative'}else if(rsiValue<=30){momentum='RSI rendah (≤30)';momentumClass='positive'}else if(hist>0){momentum='Momentum positif';momentumClass='positive'}else if(hist<0){momentum='Momentum negatif';momentumClass='negative'}$('momentum').textContent=momentum;$('momentum').className=momentumClass;
+const buyChecks=[e9[last]>e21[last],rsiValue>50&&rsiValue<70,macdLine>macdSignal];
+const sellChecks=[e9[last]<e21[last],rsiValue<50&&rsiValue>30,macdLine<macdSignal];
+const buyCount=buyChecks.filter(Boolean).length,sellCount=sellChecks.filter(Boolean).length;
+let decision='NO TRADE',decisionClass='muted',reason='';
+if(buyCount===3){decision='BUY (SIMULASI)';decisionClass='positive';reason='Semua kondisi BUY terpenuhi: EMA bullish, RSI di zona 50–70, dan MACD di atas Signal.'}
+else if(sellCount===3){decision='SELL (SIMULASI)';decisionClass='negative';reason='Semua kondisi SELL terpenuhi: EMA bearish, RSI di zona 30–50, dan MACD di bawah Signal.'}
+else{reason='Belum ada keselarasan penuh. BUY '+buyCount+'/3 kondisi; SELL '+sellCount+'/3 kondisi. Tunggu candle tertutup berikutnya.'}
+$('auto-signal').textContent=decision;$('auto-signal').className=decisionClass;$('signal-count').textContent=Math.max(buyCount,sellCount)+'/3 kondisi';$('signal-reason').textContent=reason;
 let label='Netral';let cls='muted';if(e9[prev]<=e21[prev]&&e9[last]>e21[last]){label='Persilangan bullish (EMA 9 naik di atas EMA 21)';cls='positive'}else if(e9[prev]>=e21[prev]&&e9[last]<e21[last]){label='Persilangan bearish (EMA 9 turun di bawah EMA 21)';cls='negative'}else if(e9[last]>e21[last]){label='Bullish — EMA 9 di atas EMA 21';cls='positive'}else if(e9[last]<e21[last]){label='Bearish — EMA 9 di bawah EMA 21';cls='negative'}$('ema9').textContent=e9[last].toLocaleString('en-US',{maximumFractionDigits:4});$('ema21').textContent=e21[last].toLocaleString('en-US',{maximumFractionDigits:4});sig.textContent=label;sig.className=cls;$('candle-count').textContent=candles.length+' candle';time.textContent='Sumber: '+json.source+' • Candle terakhir ditutup: '+new Date(Number(candles[last].time)).toLocaleString('id-ID')+' • '+new Date().toLocaleString('id-ID')}catch(e){sig.textContent='Analisis belum berhasil';sig.className='negative';time.textContent='Gagal mengambil candle: '+e.message}finally{btn.disabled=false}}
 $('load-ema').onclick=loadEma;
 function calcPosition(){const side=$('calc-side').value,entry=Number($('calc-entry').value),sl=Number($('calc-sl').value),tp=Number($('calc-tp').value),capital=Math.max(0,Number($('capital').value)||0),riskPct=Math.min(2,Math.max(.1,Number($('risk').value)||1)),risk=capital*riskPct/100;
