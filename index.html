@@ -20,9 +20,42 @@ button{cursor:pointer}button.primary{background:#285eae;border-color:#397bd8}.bu
 table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500}
 #history-wrap{overflow-x:auto}.positive{color:var(--green)}.negative{color:var(--red)}
 @media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:19px}header{padding:16px}.card{padding:13px}}
+</style>
+<style>
+:root{--bg:#080e19;--panel:#101a2b;--line:#23334a;--muted:#8ea2bd;--text:#edf4ff;--blue:#4e8cff;--green:#29d39a;--red:#ff7185}
+body{background:radial-gradient(ellipse at 50% -20%,#1c3c67 0%,#0b1424 46%,#070c15 100%);padding-bottom:88px}
+header{position:sticky;top:0;z-index:20;background:rgba(8,14,25,.92);backdrop-filter:blur(16px);border-bottom:1px solid #263750;padding:14px max(16px,calc((100vw - 960px)/2))}
+h1{font-size:20px;letter-spacing:.2px}.sub{letter-spacing:.3px}
+.tag{background:#302716;border-color:#8a6b35;color:#ffd88b;font-weight:700;letter-spacing:.5px}
+main{margin:16px auto;max-width:900px}
+.card{background:linear-gradient(155deg,rgba(20,33,53,.98),rgba(13,23,39,.98));border-color:#293c57;border-radius:17px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:16px}
+.grid{gap:9px}.grid>.card{margin-top:0;min-height:98px;background:linear-gradient(145deg,#192b45,#111d30)}
+.metric strong{font-size:20px;letter-spacing:-.4px}
+h2{font-size:15px;letter-spacing:.15px}
+input,select{background:#0b1728;border-color:#344a68;min-height:44px}
+button{min-height:42px;font-weight:650;transition:filter .15s,transform .15s}
+button:active{transform:scale(.98)}button.primary{background:linear-gradient(120deg,#347be9,#2455ad);border-color:#4b8ef8}
+a{color:#8ebaff}
+#app-nav{position:fixed;z-index:30;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:8px 7px calc(8px + env(safe-area-inset-bottom));background:rgba(7,13,23,.96);border-top:1px solid #293951;backdrop-filter:blur(18px)}
+#app-nav button{background:transparent;border:0;border-radius:12px;color:#8194ae;padding:8px 2px 6px;min-height:56px;font-size:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;margin:0}
+#app-nav button .nav-icon{font-size:18px;line-height:20px}
+#app-nav button.active{background:#172b48;color:#a9cbff;box-shadow:inset 0 0 0 1px #345a8d}
+#app-nav button.active .nav-label{font-weight:800}
+[data-page]{animation:fadeIn .16s ease-out}
+@keyframes fadeIn{from{opacity:.65;transform:translateY(3px)}to{opacity:1;transform:none}}
+.page-heading{display:flex;justify-content:space-between;align-items:center;margin:5px 2px 12px}
+.page-heading strong{font-size:18px}.page-heading small{color:var(--muted)}
+@media(min-width:700px){#app-nav{left:50%;right:auto;transform:translateX(-50%);width:min(620px,calc(100% - 28px));bottom:14px;border:1px solid #344b6b;border-radius:18px;padding:8px;background:rgba(9,17,30,.94)}body{padding-bottom:30px}}
+@media(max-width:560px){header{padding:13px 15px}.card{padding:14px}.grid{grid-template-columns:1fr 1fr}.metric strong{font-size:18px}main{padding:0 12px 24px}}
 </style></head>
 <body>
-<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 1.1</div></div><div class="tag">SIMULASI SAJA</div></header>
+<header><div><h1>Phantom EA Lite</h1><div class="sub">Simulator latihan trading • versi 1.1</div></div><div class="tag">SIMULASI SAJA</div></header><nav id="app-nav" aria-label="Navigasi utama">
+<button type="button" data-go="dashboard" class="active"><span class="nav-icon">⌂</span><span class="nav-label">Beranda</span></button>
+<button type="button" data-go="market"><span class="nav-icon">▥</span><span class="nav-label">Pasar</span></button>
+<button type="button" data-go="strategy"><span class="nav-icon">⌁</span><span class="nav-label">Strategi</span></button>
+<button type="button" data-go="history"><span class="nav-icon">◷</span><span class="nav-label">Riwayat</span></button>
+<button type="button" data-go="settings"><span class="nav-icon">⚙</span><span class="nav-label">Pengaturan</span></button>
+</nav>
 <main>
 <div class="grid">
  <div class="card metric"><span>Modal awal</span><strong id="starting">50.00 USDT</strong></div>
@@ -130,7 +163,26 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <section class="card"><h2>Status integrasi</h2><p class="note">Bitunix: belum terhubung. MetaTrader 5: belum terhubung. Aplikasi sudah mengambil data publik Bitunix secara read-only melalui backend Vercel. Akun trading belum dihubungkan dan tidak ada order yang dikirim. Catatan simulasi masih tersimpan lokal di perangkat. Jangan masukkan API key, password, seed phrase, atau recovery phrase ke aplikasi.</p><p class="note">MT5 Expert Advisor membutuhkan terminal desktop Windows/VPS yang berjalan; aplikasi MT5 Android tidak menjalankan EA. Integrasi live hanya boleh dipertimbangkan setelah koneksi demo diuji dan backend aman tersedia.</p></section>
 </main>
 <script>
-(()=>{const $=id=>document.getElementById(id);const KEY='phantom-ea-lite-v02';let rows=[];
+(()=>{const $=id=>document.getElementById(id);
+const navButtons=[...document.querySelectorAll('#app-nav button')];
+const mainItems=[...document.querySelector('main').children];
+mainItems.forEach((node,index)=>{
+ const heading=node.querySelector('h2')?.textContent?.toLowerCase()||'';
+ let page='settings';
+ if(index===0||heading.includes('hasil audit'))page='dashboard';
+ else if(heading.includes('data pasar'))page='market';
+ else if(heading.includes('analisis ema')||heading.includes('backtesting'))page='strategy';
+ else if(heading.includes('catat transaksi')||heading.includes('riwayat simulasi'))page='history';
+ node.dataset.page=page;
+});
+function showPage(page){
+ mainItems.forEach(node=>{node.hidden=node.dataset.page!==page});
+ navButtons.forEach(button=>{const active=button.dataset.go===page;button.classList.toggle('active',active);button.setAttribute('aria-current',active?'page':'false')});
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+navButtons.forEach(button=>button.addEventListener('click',()=>showPage(button.dataset.go)));
+showPage('dashboard');
+const KEY='phantom-ea-lite-v02';let rows=[];
 function save(){try{localStorage.setItem(KEY,JSON.stringify({rows,capital:$('capital').value,risk:$('risk').value,symbol:$('symbol').value}))}catch(e){console.warn('Penyimpanan lokal tidak tersedia',e)}}
 function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function update(){const cap=Math.max(0,Number($('capital').value)||0),risk=Math.min(2,Math.max(.1,Number($('risk').value)||1)),pnl=rows.reduce((s,r)=>s+r.pnl,0);$('starting').textContent=cap.toFixed(2)+' USDT';$('bal').textContent=(cap+pnl).toFixed(2)+' USDT';$('riskamt').textContent=(cap*risk/100).toFixed(2)+' USDT';$('total').textContent=rows.length;$('sum').textContent='P/L: '+(pnl>0?'+':'')+pnl.toFixed(2)+' USDT';$('sum').className=pnl>=0?'positive':'negative';$('history').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.time)+'</td><td>'+esc(r.symbol)+'</td><td>'+esc(r.side)+'</td><td>'+esc(r.entry)+'</td><td class="'+(r.pnl>=0?'positive':'negative')+'">'+(r.pnl>0?'+':'')+r.pnl.toFixed(2)+'</td></tr>').join(''):'<tr><td colspan="5" class="muted">Belum ada catatan.</td></tr>';save()}
