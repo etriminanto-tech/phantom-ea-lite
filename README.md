@@ -1,6 +1,6 @@
 # Phantom EA Lite
 
-Dashboard PWA berbahasa Indonesia untuk latihan dan simulasi manajemen risiko.
+Dashboard PWA berbahasa Indonesia untuk latihan dan simulasi manajemen risiko, dengan pembacaan data publik Bitunix secara read-only.
 
 ## Status rilis simulasi v1.1
 - Dashboard ramah Android.
@@ -8,7 +8,7 @@ Dashboard PWA berbahasa Indonesia untuk latihan dan simulasi manajemen risiko.
 - Risiko awal 1% per transaksi (batas simulasi 2%).
 - Instrumen latihan EURUSD, XAUUSD, BTCUSDT.
 - Pencatatan transaksi simulasi manual.
-- Tidak terhubung ke broker atau exchange dan tidak mengirim order.
+- Membaca data pasar publik Bitunix secara read-only untuk BTCUSDT/ETHUSDT melalui Vercel; akun trading tidak terhubung dan tidak mengirim order.
 - Audit strategi otomatis tersedia melalui GitHub Actions.
 - Hasil audit terakhir: seluruh 15 kombinasi timeframe/varian menghasilkan P/L bersih negatif; varian terbaik adalah EMA 50/200 + ADX 25 pada 15m dengan hasil -1,80 USDT dan profit factor 0,93 dari modal 50 USDT.
 
@@ -27,4 +27,4 @@ Integrasi Bitunix harus dibangun dan diuji pada demo/testnet terlebih dahulu den
 
 GitHub Pages hanya menyajikan file statis dan tidak menjalankan `api/market.js`. Untuk tombol harga Bitunix, impor repositori ini ke Vercel dan deploy sebagai project dari root repository. Vercel akan menjalankan fungsi serverless `/api/market` yang hanya meneruskan permintaan data publik ticker/kline dengan daftar simbol dan interval yang dibatasi. Fungsi ini tidak menerima API key dan tidak memiliki endpoint order.
 
-Setelah deploy, gunakan domain Vercel project sebagai alamat aplikasi. GitHub Pages tetap dapat dipakai untuk versi dashboard statis, tetapi tombol data pasar memerlukan domain Vercel.
+Setelah deploy, gunakan domain Vercel project sebagai alamat aplikasi. Dashboard memakai endpoint `/api/market` untuk ticker dan candle Futures BTCUSDT/ETHUSDT. Endpoint hanya menerima GET, membatasi simbol dan interval, serta tidak menerima kredensial maupun menyediakan endpoint order. GitHub Pages tetap dapat dipakai untuk versi dashboard statis, tetapi tombol data pasar memerlukan domain Vercel. Data pasar publik didokumentasikan Bitunix pada https://www.bitunix.com/api-docs/futures/market/get_kline dan https://www.bitunix.com/api-docs/futures/market/get_tickers.html.
