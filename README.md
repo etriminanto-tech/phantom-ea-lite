@@ -1,30 +1,68 @@
 # Phantom EA Lite
 
-Dashboard PWA berbahasa Indonesia untuk latihan dan simulasi manajemen risiko, dengan pembacaan data publik Bitunix secara read-only.
+Aplikasi web/PWA berbahasa Indonesia untuk analisis pasar, simulasi trading, pengelolaan risiko, dan pencatatan hasil. Proyek ini merupakan implementasi independen; bukan salinan kode, backend, atau lisensi Phantom EA.
 
-## Status rilis simulasi v1.1
-- Dashboard ramah Android.
-- Modal simulasi awal 50 USDT.
-- Risiko awal 1% per transaksi (batas simulasi 2%).
-- Instrumen latihan EURUSD, XAUUSD, BTCUSDT.
-- Pencatatan transaksi simulasi manual.
-- Membaca data pasar publik Bitunix secara read-only untuk BTCUSDT/ETHUSDT melalui Vercel; akun trading tidak terhubung dan tidak mengirim order.
-- Audit strategi otomatis tersedia melalui GitHub Actions.
-- Hasil audit terakhir: seluruh 15 kombinasi timeframe/varian menghasilkan P/L bersih negatif; varian terbaik adalah EMA 50/200 + ADX 25 pada 15m dengan hasil -1,80 USDT dan profit factor 0,93 dari modal 50 USDT.
+## Status kemampuan saat ini
 
-## Audit otomatis terakhir
-Laporan dijalankan pada 23 November 2026 dengan 5.000 candle untuk setiap timeframe (5m, 15m, 1h), risiko 1%, fee 0,06% dan slippage 0,02% per sisi. Hasil lengkap dan artefak: https://github.com/etriminanto-tech/phantom-ea-lite/actions/runs/45098396703
+- Dashboard responsif untuk Android dan desktop melalui HTTPS.
+- PWA dapat ditambahkan ke layar utama Android dari browser yang mendukung instalasi.
+- Modal simulasi awal 50 USDT; risiko awal 1% per transaksi (pengaturan dibatasi 0,1–2%).
+- Instrumen kalkulator/simulasi: EURUSD, XAUUSD, BTCUSDT.
+- Pencatatan transaksi simulasi; data lokal tersimpan di browser.
+- Jika pengguna masuk, snapshot pengaturan dan riwayat simulasi disinkronkan ke Supabase `user_app_state` dalam payload JSON. RLS membatasi setiap pengguna pada baris miliknya.
+- Cadangan lokal dapat diekspor dan dipulihkan melalui JSON.
+- Analisis BTCUSDT 15m: EMA 9/21, RSI 14, MACD, EMA 50/200 sebagai filter tren, dan support/resistance dari 20 candle.
+- Backtest historis Bitunix Futures publik, dengan fee, slippage, ATR stop, target berbasis R, dan filter EMA 50/200.
+- Proxy Vercel `/api/market` hanya membaca data publik Bitunix Futures; simbol BTCUSDT/ETHUSDT dan interval yang diizinkan dibatasi di server.
 
-## Menjalankan
-Buka `index.html` melalui server HTTPS atau aktifkan GitHub Pages dari Settings → Pages → Deploy from a branch → main → /(root). Setelah situs aktif, buka URL Pages di Android Chrome dan pilih Tambahkan ke layar utama.
+## Hasil audit strategi
 
-## Peringatan dan batasan
-Semua transaksi yang dicatat di versi ini adalah simulasi lokal di browser. Data belum disimpan ke server dan dapat hilang ketika data browser dibersihkan. Jangan masukkan API key, password broker, seed phrase, atau recovery phrase.
+Audit historis sebelumnya menggunakan 5.000 candle per timeframe (5m, 15m, 1h), modal 50 USDT, risiko 1%, fee 0,06% dan slippage 0,02% per sisi. Semua 15 varian yang diuji pada audit itu menghasilkan P/L bersih negatif. Varian dengan kerugian paling kecil adalah EMA 50/200 + ADX 25 pada 15m, hasil -1,80 USDT dan profit factor 0,93. Ini bukan bukti profitabilitas dan tidak boleh dipakai sebagai dasar live trading.
 
-Integrasi Bitunix harus dibangun dan diuji pada demo/testnet terlebih dahulu dengan backend aman. Otomasi MetaTrader 5 memerlukan terminal MT5 desktop yang berjalan pada Windows/VPS; aplikasi MT5 Android tidak menjalankan Expert Advisor. Live trading tidak disediakan pada versi ini.
+Backtest di aplikasi dan audit CI adalah simulasi historis, bukan jaminan hasil masa depan. Funding, spread dinamis, likuidasi, latensi, partial fills, dan seluruh aturan kontrak belum tentu dimodelkan.
 
-## Deploy dengan Vercel untuk proxy API publik
+## Arsitektur
 
-GitHub Pages hanya menyajikan file statis dan tidak menjalankan `api/market.js`. Untuk tombol harga Bitunix, impor repositori ini ke Vercel dan deploy sebagai project dari root repository. Vercel akan menjalankan fungsi serverless `/api/market` yang hanya meneruskan permintaan data publik ticker/kline dengan daftar simbol dan interval yang dibatasi. Fungsi ini tidak menerima API key dan tidak memiliki endpoint order.
+- Frontend: `index.html`, `manifest.json`, `sw.js`, `icon.svg`.
+- Market proxy: `api/market.js` pada Vercel.
+- Cloud state: Supabase Auth dan tabel `public.user_app_state`.
+- RLS pada tabel pengguna menggunakan `auth.uid() = user_id`.
+- Tidak ada API key Bitunix di frontend; endpoint market saat ini tidak menerima kredensial dan tidak memiliki endpoint order.
 
-Setelah deploy, gunakan domain Vercel project sebagai alamat aplikasi. Dashboard memakai endpoint `/api/market` untuk ticker dan candle Futures BTCUSDT/ETHUSDT. Endpoint hanya menerima GET, membatasi simbol dan interval, serta tidak menerima kredensial maupun menyediakan endpoint order. GitHub Pages tetap dapat dipakai untuk versi dashboard statis, tetapi tombol data pasar memerlukan domain Vercel. Data pasar publik didokumentasikan Bitunix pada https://www.bitunix.com/api-docs/futures/market/get_kline dan https://www.bitunix.com/api-docs/futures/market/get_tickers.html.
+## Batasan yang belum selesai
+
+- Tidak ada eksekusi order Bitunix, baik demo maupun live.
+- Ketersediaan demo di aplikasi Bitunix tidak berarti tersedia API order demo eksternal. Jangan menganggap endpoint market publik sebagai koneksi trading.
+- Belum ada Expert Advisor MT5/bridge Windows atau VPS.
+- Aplikasi saat ini adalah PWA, bukan APK Android native.
+- Email pemulihan password memerlukan SMTP/domain terverifikasi agar pengiriman dapat diandalkan.
+- Sinkronisasi cloud harus tetap diuji dengan sesi pengguna dan pemeriksaan RLS; keberhasilan satu sesi bukan jaminan untuk semua kondisi jaringan/perangkat.
+- Strategi belum lolos audit profitabilitas; live trading dinonaktifkan/tidak disediakan.
+
+## Keamanan
+
+- Jangan masukkan API secret, password broker, seed phrase, atau recovery phrase ke aplikasi maupun chat.
+- Jangan menaruh Supabase service-role key atau Bitunix secret di browser.
+- Hanya gunakan publishable/anon key dengan RLS di frontend.
+- Backup JSON dapat berisi riwayat simulasi pribadi; simpan di tempat aman.
+- Gunakan akun demo/simulasi. Jangan gunakan uang sungguhan dengan strategi yang belum tervalidasi.
+
+## Menjalankan dan instalasi PWA
+
+1. Buka domain produksi Vercel melalui HTTPS.
+2. Di Android Chrome, buka menu ⋮ lalu pilih **Instal aplikasi** atau **Tambahkan ke layar utama** jika tersedia.
+3. Untuk sinkronisasi cloud, masuk dengan akun Supabase.
+4. Jika halaman lama masih tampil setelah deployment, tutup tab aplikasi, buka ulang, dan lakukan refresh. Service worker menggunakan versi cache berversi.
+
+## Audit otomatis
+
+Laporan CI dan artefak audit historis tersedia di:
+https://github.com/etriminanto-tech/phantom-ea-lite/actions
+
+## Dokumentasi API pasar
+
+Proxy mengacu pada dokumentasi resmi Bitunix Futures market:
+- https://www.bitunix.com/api-docs/futures/market/get_kline
+- https://www.bitunix.com/api-docs/futures/market/get_tickers.html
+
+Endpoint ini hanya untuk data publik read-only. Tidak boleh digunakan sebagai bukti bahwa order trading otomatis telah tersedia.
