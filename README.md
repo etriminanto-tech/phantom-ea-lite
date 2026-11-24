@@ -5,6 +5,8 @@ Aplikasi web/PWA berbahasa Indonesia untuk analisis pasar, simulasi trading, pen
 ## Status kemampuan saat ini
 
 - Dashboard responsif untuk Android dan desktop melalui HTTPS.
+- Pusat perintah Android: perintah teks untuk mengambil harga BTCUSDT, menjalankan analisis indikator, dan memulai/menghentikan pemantauan berkala.
+- Pemantauan otomatis memperbarui data setiap 60 detik selama PWA tetap terbuka di layar; pemantauan berhenti saat pengguna menghentikannya atau aplikasi ditutup.
 - PWA dapat ditambahkan ke layar utama Android dari browser yang mendukung instalasi.
 - Modal simulasi awal 50 USDT; risiko awal 1% per transaksi (pengaturan dibatasi 0,1–2%).
 - Instrumen kalkulator/simulasi: EURUSD, XAUUSD, BTCUSDT.
