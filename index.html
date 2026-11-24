@@ -75,6 +75,14 @@ a{color:#8ebaff}
  <div class="card metric"><span>Jumlah catatan</span><strong id="total">0</strong></div>
 </div>
 <section class="card" style="margin-top:14px">
+
+<section class="card" id="command-center" data-page="dashboard">
+<h2>Perintah otomatis Android</h2>
+<p class="note">Ketik perintah biasa. Phantom akan mengambil harga BTCUSDT atau menjalankan analisis indikator. Pemantauan berkala berjalan selama aplikasi terbuka; tidak membuka aplikasi Bitunix lain dan tidak melakukan transaksi.</p>
+<div class="field"><label for="assistant-command">Perintah Anda</label><input id="assistant-command" type="text" autocomplete="off" placeholder="Contoh: analisis BTC sekarang"></div>
+<div class="buttons"><button class="primary" id="run-command" type="button">Jalankan perintah</button><button id="start-monitor" type="button">Mulai pantau otomatis</button><button id="stop-monitor" type="button" disabled>Hentikan</button></div>
+<p class="note" id="command-status" aria-live="polite">Siap menerima perintah. Pemantauan otomatis sedang berhenti.</p>
+</section>
 <h2>Status strategi & hasil audit otomatis</h2>
 <div class="row">
  <div class="field"><label>Hasil audit terakhir</label><strong class="negative">Belum lolos profitabilitas</strong></div>
@@ -297,7 +305,25 @@ else if(sellCount===3){decision='SELL (SIMULASI)';decisionClass='negative';reaso
 else{reason='Belum ada keselarasan penuh. BUY '+buyCount+'/3 kondisi; SELL '+sellCount+'/3 kondisi. Tunggu candle tertutup berikutnya.'}
 $('auto-signal').textContent=decision;$('auto-signal').className=decisionClass;$('signal-count').textContent=Math.max(buyCount,sellCount)+'/3 kondisi';$('signal-reason').textContent=reason;
 let label='Netral';let cls='muted';if(e9[prev]<=e21[prev]&&e9[last]>e21[last]){label='Persilangan bullish (EMA 9 naik di atas EMA 21)';cls='positive'}else if(e9[prev]>=e21[prev]&&e9[last]<e21[last]){label='Persilangan bearish (EMA 9 turun di bawah EMA 21)';cls='negative'}else if(e9[last]>e21[last]){label='Bullish — EMA 9 di atas EMA 21';cls='positive'}else if(e9[last]<e21[last]){label='Bearish — EMA 9 di bawah EMA 21';cls='negative'}$('ema9').textContent=e9[last].toLocaleString('en-US',{maximumFractionDigits:4});$('ema21').textContent=e21[last].toLocaleString('en-US',{maximumFractionDigits:4});sig.textContent=label;sig.className=cls;$('candle-count').textContent=candles.length+' candle';time.textContent='Sumber: '+'Bitunix Futures public API'+' • Candle terakhir ditutup: '+new Date(Number(candles[last].time)).toLocaleString('id-ID')+' • '+new Date().toLocaleString('id-ID')}catch(e){sig.textContent='Analisis belum berhasil';sig.className='negative';time.textContent='Gagal mengambil candle: '+e.message}finally{btn.disabled=false}}
+
 $('load-ema').onclick=loadEma;
+let monitorTimer=null,monitorBusy=false;
+function commandStatus(message,isError=false){const el=$('command-status');el.textContent=message;el.className='note'+(isError?' negative':'')}
+async function runUserCommand(raw){const cmd=String(raw||'').trim().toLowerCase();if(!cmd){commandStatus('Tuliskan perintah terlebih dahulu.',true);return}
+ if(/(henti|stop|matikan).*(pantau|monitor)|pantau.*(henti|stop)/.test(cmd)){stopMonitoring();commandStatus('Pemantauan otomatis dihentikan.');return}
+ if(/(mulai|aktifkan|nyalakan).*(pantau|monitor)|pantau otomatis/.test(cmd)){startMonitoring();commandStatus('Pemantauan otomatis aktif: harga dan analisis diperbarui setiap 60 detik selama aplikasi terbuka.');return}
+ if(/(harga|price|ticker|pasar)/.test(cmd)&&!/(analisis|analisa|sinyal)/.test(cmd)){showPage('market');commandStatus('Mengambil harga BTCUSDT dari Bitunix…');await loadMarket();commandStatus('Permintaan harga selesai. Lihat hasil pada halaman Pasar.');return}
+ if(/(analisis|analisa|sinyal|entry|buy|sell|btc|bitcoin)/.test(cmd)){showPage('strategy');commandStatus('Mengambil harga dan candle tertutup, lalu menghitung indikator…');await loadMarket();await loadEma();commandStatus('Analisis selesai. Periksa keputusan di bagian Sinyal strategi. Ini hanya simulasi, bukan order.');return}
+ commandStatus('Perintah belum dikenali. Coba: “harga BTC sekarang”, “analisis BTC sekarang”, “mulai pantau otomatis”, atau “hentikan pantauan”.',true)
+}
+function startMonitoring(){if(monitorTimer)return;$('start-monitor').disabled=true;$('stop-monitor').disabled=false;const tick=async()=>{if(monitorBusy||document.visibilityState==='hidden')return;monitorBusy=true;try{await loadMarket();await loadEma();commandStatus('Pemantauan aktif • pembaruan terakhir '+new Date().toLocaleTimeString('id-ID')+'. Aplikasi harus tetap terbuka.')}catch(e){commandStatus('Pemantauan mengalami kendala: '+e.message,true)}finally{monitorBusy=false}};tick();monitorTimer=setInterval(tick,60000)}
+function stopMonitoring(){if(monitorTimer){clearInterval(monitorTimer);monitorTimer=null}$('start-monitor').disabled=false;$('stop-monitor').disabled=true}
+$('run-command').addEventListener('click',()=>runUserCommand($('assistant-command').value));
+$('assistant-command').addEventListener('keydown',event=>{if(event.key==='Enter')runUserCommand($('assistant-command').value)});
+$('start-monitor').addEventListener('click',()=>{startMonitoring();commandStatus('Pemantauan otomatis aktif: harga dan analisis diperbarui setiap 60 detik selama aplikasi terbuka.')});
+$('stop-monitor').addEventListener('click',()=>{stopMonitoring();commandStatus('Pemantauan otomatis dihentikan.')});
+document.addEventListener('visibilitychange',()=>{if(monitorTimer&&document.visibilityState==='visible')commandStatus('Aplikasi aktif kembali. Pemantauan dilanjutkan saat layar terbuka.')});
+
 async function runBacktest(){const btn=$('run-backtest'),status=$('bt-status');btn.disabled=true;status.textContent='Mengambil data historis bertahap…';status.className='note';try{
  const interval=$('bt-interval').value,target=Number($('bt-count').value),feePct=Math.max(0,Math.min(1,Number($('bt-fee').value)||0))/100,slipPct=Math.max(0,Math.min(1,Number($('bt-slippage').value)||0))/100,costRate=feePct+slipPct;
  const all=[],seen=new Set();let endTime=null,pages=0;
