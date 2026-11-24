@@ -1,4 +1,4 @@
-const CACHE='phantom-ea-lite-v22';
+const CACHE='phantom-ea-lite-v23';
 const ASSETS=['./','./index.html','./manifest.json','./icon.svg'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
