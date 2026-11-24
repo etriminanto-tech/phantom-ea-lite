@@ -81,7 +81,7 @@ a{color:#8ebaff}
 <p class="note">Ketik perintah biasa. Phantom akan mengambil harga BTCUSDT atau menjalankan analisis indikator. Pemantauan berkala berjalan selama aplikasi terbuka; tidak membuka aplikasi Bitunix lain dan tidak melakukan transaksi.</p>
 <div class="field"><label for="assistant-command">Perintah Anda</label><input id="assistant-command" type="text" autocomplete="off" placeholder="Contoh: analisis BTC sekarang"></div>
 <div class="buttons"><button class="primary" id="run-command" type="button">Jalankan perintah</button><button id="start-monitor" type="button">Mulai pantau otomatis</button><button id="stop-monitor" type="button" disabled>Hentikan</button></div>
-<p class="note" id="command-status" aria-live="polite">Siap menerima perintah. Pemantauan otomatis sedang berhenti.</p>
+<p class="note" id="command-status" aria-live="polite">Siap menerima perintah. Pemantauan otomatis sedang berhenti.</p><p class="note" id="paper-status" aria-live="polite">Simulasi otomatis belum berjalan. Posisi virtual hanya aktif saat pemantauan berjalan.</p>
 </section>
 <h2>Status strategi & hasil audit otomatis</h2>
 <div class="row">
@@ -278,7 +278,7 @@ if(sb){sb.auth.getSession().then(({data})=>handleSession(data.session));sb.auth.
 $('add').onclick=()=>{const pnl=Number($('result').value),entry=$('entry').value.trim();if($('result').value.trim()===''||!Number.isFinite(pnl)){alert('Masukkan hasil transaksi dalam USDT.');return}if(entry!==''&&(!Number.isFinite(Number(entry))||Number(entry)<=0)){alert('Harga masuk harus berupa angka lebih besar dari nol.');return}rows.unshift({time:new Date().toLocaleString('id-ID'),symbol:$('symbol').value,side:$('direction').value,entry:entry||'-',pnl});$('result').value='';$('entry').value='';update()};
 $('clear').onclick=()=>{if(confirm('Hapus semua catatan simulasi di perangkat ini?')){rows=[];update()}};
 $('capital').oninput=update;$('risk').oninput=update;$('symbol').onchange=save;restore();update();
-async function loadMarket(){const btn=$('load-market'),status=$('live-status'),price=$('live-price'),stamp=$('market-time');btn.disabled=true;status.textContent='Menghubungkan…';status.className='muted';try{const response=await fetch('/api/market?type=ticker&symbol=BTCUSDT',{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(!json.ok||!Array.isArray(json.data))throw new Error(json.error||'Format data tidak sesuai');const item=json.data.find(x=>x.symbol==='BTCUSDT');if(!item)throw new Error('BTCUSDT tidak ditemukan');const value=Number(item.lastPrice||item.last);if(!Number.isFinite(value)||value<=0)throw new Error('Harga tidak valid');price.textContent=value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' USDT';status.textContent='Terhubung';status.className='positive';stamp.textContent='Sumber: '+'Bitunix Futures public API'+' • diperbarui '+new Date().toLocaleString('id-ID')}catch(e){status.textContent='Belum berhasil';status.className='negative';stamp.textContent='Gagal mengambil data: '+e.message+'. Pastikan aplikasi dibuka dari domain Vercel yang sudah diterbitkan; GitHub Pages tidak menjalankan fungsi server.'}finally{btn.disabled=false}}
+async function loadMarket(){const btn=$('load-market'),status=$('live-status'),price=$('live-price'),stamp=$('market-time');btn.disabled=true;status.textContent='Menghubungkan…';status.className='muted';try{const response=await fetch('/api/market?type=ticker&symbol=BTCUSDT',{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(!json.ok||!Array.isArray(json.data))throw new Error(json.error||'Format data tidak sesuai');const item=json.data.find(x=>x.symbol==='BTCUSDT');if(!item)throw new Error('BTCUSDT tidak ditemukan');const value=Number(item.lastPrice||item.last);if(!Number.isFinite(value)||value<=0)throw new Error('Harga tidak valid');price.textContent=value.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' USDT';window.__phantomLastPrice=value;status.textContent='Terhubung';status.className='positive';stamp.textContent='Sumber: '+'Bitunix Futures public API'+' • diperbarui '+new Date().toLocaleString('id-ID')}catch(e){status.textContent='Belum berhasil';status.className='negative';stamp.textContent='Gagal mengambil data: '+e.message+'. Pastikan aplikasi dibuka dari domain Vercel yang sudah diterbitkan; GitHub Pages tidak menjalankan fungsi server.'}finally{btn.disabled=false}}
 $('load-market').onclick=loadMarket;
 
 async function loadEma(){const btn=$('load-ema'),sig=$('ema-signal'),time=$('ema-time');btn.disabled=true;sig.textContent='Mengambil candle…';sig.className='muted';try{const response=await fetch('/api/market?type=kline&symbol=BTCUSDT&interval=15m&limit=200',{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);const json=await response.json();if(!json.ok||!Array.isArray(json.data))throw new Error(json.error||'Format candle tidak sesuai');const candles=json.data.filter(x=>Number.isFinite(Number(x.close))&&Number(x.time)).sort((a,b)=>Number(a.time)-Number(b.time));if(candles.length<22)throw new Error('Data candle kurang dari 22');const closes=candles.map(x=>Number(x.close));function emaSeries(values,period){const k=2/(period+1);let v=values.slice(0,period).reduce((a,b)=>a+b,0)/period;const out=Array(period-1).fill(null);out.push(v);for(let i=period;i<values.length;i++){v=values[i]*k+v*(1-k);out.push(v)}return out}const e9=emaSeries(closes,9),e21=emaSeries(closes,21),e50=emaSeries(closes,50),e200=emaSeries(closes,200),last=e9.length-1,prev=last-1;
@@ -303,10 +303,42 @@ let decision='NO TRADE',decisionClass='muted',reason='';
 if(buyCount===3){decision='BUY (SIMULASI)';decisionClass='positive';reason='Semua kondisi BUY terpenuhi: EMA bullish, RSI di zona 50–70, dan MACD di atas Signal.'}
 else if(sellCount===3){decision='SELL (SIMULASI)';decisionClass='negative';reason='Semua kondisi SELL terpenuhi: EMA bearish, RSI di zona 30–50, dan MACD di bawah Signal.'}
 else{reason='Belum ada keselarasan penuh. BUY '+buyCount+'/3 kondisi; SELL '+sellCount+'/3 kondisi. Tunggu candle tertutup berikutnya.'}
-$('auto-signal').textContent=decision;$('auto-signal').className=decisionClass;$('signal-count').textContent=Math.max(buyCount,sellCount)+'/3 kondisi';$('signal-reason').textContent=reason;
+$('auto-signal').textContent=decision;$('auto-signal').className=decisionClass;$('signal-count').textContent=Math.max(buyCount,sellCount)+'/3 kondisi';$('signal-reason').textContent=reason;window.__phantomAnalysis={signal:buyCount===3?'BUY':sellCount===3?'SELL':'NO TRADE',price:closes[last],candleTime:Number(candles[last].time),high:Number(candles[last].high),low:Number(candles[last].low),close:Number(candles[last].close),atr:(()=>{let sum=0;for(let j=Math.max(1,closes.length-14);j<closes.length;j++){const prevClose=closes[j-1];sum+=Math.max(Number(candles[j].high)-Number(candles[j].low),Math.abs(Number(candles[j].high)-prevClose),Math.abs(Number(candles[j].low)-prevClose))}return sum/Math.min(14,closes.length-1)})()};
 let label='Netral';let cls='muted';if(e9[prev]<=e21[prev]&&e9[last]>e21[last]){label='Persilangan bullish (EMA 9 naik di atas EMA 21)';cls='positive'}else if(e9[prev]>=e21[prev]&&e9[last]<e21[last]){label='Persilangan bearish (EMA 9 turun di bawah EMA 21)';cls='negative'}else if(e9[last]>e21[last]){label='Bullish — EMA 9 di atas EMA 21';cls='positive'}else if(e9[last]<e21[last]){label='Bearish — EMA 9 di bawah EMA 21';cls='negative'}$('ema9').textContent=e9[last].toLocaleString('en-US',{maximumFractionDigits:4});$('ema21').textContent=e21[last].toLocaleString('en-US',{maximumFractionDigits:4});sig.textContent=label;sig.className=cls;$('candle-count').textContent=candles.length+' candle';time.textContent='Sumber: '+'Bitunix Futures public API'+' • Candle terakhir ditutup: '+new Date(Number(candles[last].time)).toLocaleString('id-ID')+' • '+new Date().toLocaleString('id-ID')}catch(e){sig.textContent='Analisis belum berhasil';sig.className='negative';time.textContent='Gagal mengambil candle: '+e.message}finally{btn.disabled=false}}
 
 $('load-ema').onclick=loadEma;
+let paperPosition=(()=>{try{return JSON.parse(localStorage.getItem('phantom-paper-position-v1')||'null')}catch(e){return null}})();
+function savePaperPosition(){try{if(paperPosition)localStorage.setItem('phantom-paper-position-v1',JSON.stringify(paperPosition));else localStorage.removeItem('phantom-paper-position-v1')}catch(e){}}
+function paperStatus(message,error=false){const el=$('paper-status');if(el){el.textContent=message;el.className='note'+(error?' negative':'')}}
+function paperEquity(){const capital=Math.max(1,Number($('capital').value)||50);return Math.max(0.01,capital+rows.reduce((sum,r)=>sum+Number(r.pnl||0),0))}
+async function paperTradeTick(){
+ const a=window.__phantomAnalysis,price=Number(window.__phantomLastPrice);
+ if(!a||!Number.isFinite(price)||price<=0){paperStatus('Menunggu harga dan analisis pasar.');return}
+ const feeRate=.0006,slipRate=.0002;
+ if(paperPosition){
+  const p=paperPosition,hitSL=p.side==='BUY'?price<=p.sl:price>=p.sl,hitTP=p.side==='BUY'?price>=p.tp:price<=p.tp;
+  if(hitSL||hitTP){
+   const exit=hitSL?p.sl:p.tp,raw=(p.side==='BUY'?exit-p.entry:p.entry-exit)*p.qty;
+   const costs=(p.entry+exit)*p.qty*(feeRate+slipRate),pnl=raw-costs;
+   rows.unshift({time:new Date().toLocaleString('id-ID'),symbol:'BTCUSDT',side:p.side,entry:p.entry.toFixed(2)+' → '+exit.toFixed(2),pnl:Number(pnl.toFixed(4))});
+   paperPosition=null;savePaperPosition();update();
+   paperStatus('Posisi '+p.side+' ditutup otomatis pada '+(hitSL?'STOP LOSS':'TAKE PROFIT')+'. P/L bersih '+(pnl>=0?'+':'')+pnl.toFixed(4)+' USDT.');
+  }else paperStatus('Posisi '+p.side+' aktif • entry '+p.entry.toFixed(2)+' • SL '+p.sl.toFixed(2)+' • TP '+p.tp.toFixed(2)+' • harga '+price.toFixed(2));
+  return;
+ }
+ if(a.signal==='NO TRADE'||!Number.isFinite(a.atr)||a.atr<=0){paperStatus('Belum ada sinyal valid. Tidak membuka posisi.');return}
+ if(paperPosition)return;
+ const candleKey=String(a.candleTime||'');
+ const lastOpened=localStorage.getItem('phantom-paper-last-candle-v1');
+ if(!candleKey||lastOpened===candleKey){paperStatus('Menunggu candle baru agar tidak membuka posisi berulang.');return}
+ const equity=paperEquity(),riskPct=Math.min(2,Math.max(.1,Number($('risk').value)||1))/100,riskMoney=equity*riskPct;
+ const entry=price,dist=a.atr*1.5,qty=riskMoney/dist;
+ if(!Number.isFinite(qty)||qty<=0||qty*entry>equity*5){paperStatus('Ukuran posisi melewati batas simulasi yang aman; tidak membuka posisi.',true);localStorage.setItem('phantom-paper-last-candle-v1',candleKey);return}
+ const buy=a.signal==='BUY';
+ paperPosition={side:a.signal,entry,qty,sl:buy?entry-dist:entry+dist,tp:buy?entry+dist*2:entry-dist*2,openedAt:new Date().toISOString(),candleTime:candleKey};
+ localStorage.setItem('phantom-paper-last-candle-v1',candleKey);savePaperPosition();
+ paperStatus('Posisi '+a.signal+' virtual dibuka • entry '+entry.toFixed(2)+' • risiko maks. sekitar '+riskMoney.toFixed(2)+' USDT • SL '+paperPosition.sl.toFixed(2)+' • TP '+paperPosition.tp.toFixed(2)+'.');
+}
 let monitorTimer=null,monitorBusy=false;
 function commandStatus(message,isError=false){const el=$('command-status');el.textContent=message;el.className='note'+(isError?' negative':'')}
 async function runUserCommand(raw){const cmd=String(raw||'').trim().toLowerCase();if(!cmd){commandStatus('Tuliskan perintah terlebih dahulu.',true);return}
@@ -316,7 +348,7 @@ async function runUserCommand(raw){const cmd=String(raw||'').trim().toLowerCase(
  if(/(analisis|analisa|sinyal|entry|buy|sell|btc|bitcoin)/.test(cmd)){showPage('strategy');commandStatus('Mengambil harga dan candle tertutup, lalu menghitung indikator…');await loadMarket();await loadEma();commandStatus('Analisis selesai. Periksa keputusan di bagian Sinyal strategi. Ini hanya simulasi, bukan order.');return}
  commandStatus('Perintah belum dikenali. Coba: “harga BTC sekarang”, “analisis BTC sekarang”, “mulai pantau otomatis”, atau “hentikan pantauan”.',true)
 }
-function startMonitoring(){if(monitorTimer)return;$('start-monitor').disabled=true;$('stop-monitor').disabled=false;const tick=async()=>{if(monitorBusy||document.visibilityState==='hidden')return;monitorBusy=true;try{await loadMarket();await loadEma();commandStatus('Pemantauan aktif • pembaruan terakhir '+new Date().toLocaleTimeString('id-ID')+'. Aplikasi harus tetap terbuka.')}catch(e){commandStatus('Pemantauan mengalami kendala: '+e.message,true)}finally{monitorBusy=false}};tick();monitorTimer=setInterval(tick,60000)}
+function startMonitoring(){if(monitorTimer)return;$('start-monitor').disabled=true;$('stop-monitor').disabled=false;const tick=async()=>{if(monitorBusy||document.visibilityState==='hidden')return;monitorBusy=true;try{await loadMarket();await loadEma();await paperTradeTick();commandStatus('Pemantauan & simulasi otomatis aktif • '+new Date().toLocaleTimeString('id-ID')+'. Aplikasi harus tetap terbuka.')}catch(e){commandStatus('Pemantauan mengalami kendala: '+e.message,true)}finally{monitorBusy=false}};tick();monitorTimer=setInterval(tick,60000)}
 function stopMonitoring(){if(monitorTimer){clearInterval(monitorTimer);monitorTimer=null}$('start-monitor').disabled=false;$('stop-monitor').disabled=true}
 $('run-command').addEventListener('click',()=>runUserCommand($('assistant-command').value));
 $('assistant-command').addEventListener('keydown',event=>{if(event.key==='Enter')runUserCommand($('assistant-command').value)});
