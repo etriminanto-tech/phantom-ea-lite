@@ -183,12 +183,48 @@ a{color:#8ebaff}
 const SUPABASE_URL='https://citcavptknwnexrztplx.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_ZeRKdwxJln8qasKyBGzahw_EZ3tQiDD';
 const sb=window.supabase?.createClient?window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY):null;
-let currentUser=null,cloudSyncTimer=null;
+let currentUser=null,cloudSyncTimer=null,cloudSyncInFlight=false,cloudSyncDirty=false,cloudSyncRevision=0;
 function authMessage(message,isError=false){const el=$('auth-status');if(el){el.textContent=message;el.className='note'+(isError?' negative':'')}}
-async function syncCloud(){if(!sb||!currentUser)return;try{const payload={rows,capital:$('capital').value,risk:$('risk').value,symbol:$('symbol').value};const {error}=await sb.from('user_app_state').upsert({user_id:currentUser.id,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error)throw error;authMessage('Akun aktif • data tersinkron ke cloud.')}catch(e){authMessage('Sinkronisasi belum berhasil: '+(e.message||'kesalahan jaringan'),true)}}
-function scheduleCloudSync(){if(!currentUser)return;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(syncCloud,900)}
-async function loadCloud(){if(!sb||!currentUser)return;try{const {data,error}=await sb.from('user_app_state').select('payload').eq('user_id',currentUser.id).maybeSingle();if(error)throw error;if(data?.payload){const p=data.payload;if(Array.isArray(p.rows))rows=p.rows.filter(r=>r&&Number.isFinite(Number(r.pnl))).map(r=>({...r,pnl:Number(r.pnl)}));if(p.capital)$('capital').value=p.capital;if(p.risk)$('risk').value=p.risk;if(['EURUSD','XAUUSD','BTCUSDT'].includes(p.symbol))$('symbol').value=p.symbol;update();authMessage('Berhasil memuat data cloud untuk akun '+currentUser.email+'.')}else{await syncCloud();authMessage('Akun aktif. Data perangkat ini disimpan sebagai data awal cloud.')}}catch(e){authMessage('Gagal memuat data cloud: '+(e.message||'kesalahan jaringan'),true)}}
-async function handleSession(session){currentUser=session?.user||null;$('auth-signin').hidden=!!currentUser;$('auth-signup').hidden=!!currentUser;$('auth-signout').hidden=!currentUser;$('auth-email').disabled=!!currentUser;$('auth-password').disabled=!!currentUser;if(currentUser){authMessage('Login sebagai '+currentUser.email+' • memuat data cloud…');await loadCloud()}else authMessage('Belum masuk. Data masih disimpan di perangkat ini.');}
+async function syncCloud(){
+ if(!sb||!currentUser)return;
+ if(cloudSyncInFlight){cloudSyncDirty=true;return}
+ cloudSyncInFlight=true;cloudSyncDirty=false;const revision=cloudSyncRevision;
+ try{
+  const payload={schema_version:1,rows,capital:$('capital').value,risk:$('risk').value,symbol:$('symbol').value,updated_at:new Date().toISOString()};
+  const {error}=await sb.from('user_app_state').upsert({user_id:currentUser.id,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  if(error)throw error;
+  if(revision===cloudSyncRevision)authMessage('Akun aktif • data terakhir berhasil tersinkron ke cloud.');
+  else cloudSyncDirty=true;
+ }catch(e){authMessage('Data tersimpan di perangkat, tetapi sinkronisasi cloud gagal: '+(e.message||'periksa koneksi dan izin database'),true)}
+ finally{cloudSyncInFlight=false;if(cloudSyncDirty&&currentUser)setTimeout(syncCloud,250)}
+}
+function scheduleCloudSync(){if(!currentUser)return;cloudSyncRevision++;cloudSyncDirty=true;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(syncCloud,900)}
+async function loadCloud(){
+ if(!sb||!currentUser)return;
+ try{
+  const {data,error}=await sb.from('user_app_state').select('payload,updated_at').eq('user_id',currentUser.id).maybeSingle();
+  if(error)throw error;
+  if(data?.payload){
+   const p=data.payload;
+   if(Array.isArray(p.rows))rows=p.rows.filter(r=>r&&Number.isFinite(Number(r.pnl))).map(r=>({...r,pnl:Number(r.pnl)}));
+   if(p.capital)$('capital').value=p.capital;
+   if(p.risk)$('risk').value=p.risk;
+   if(['EURUSD','XAUUSD','BTCUSDT'].includes(p.symbol))$('symbol').value=p.symbol;
+   update();
+   authMessage('Data cloud berhasil dimuat untuk '+currentUser.email+'.');
+  }else{
+   await syncCloud();
+   authMessage('Akun aktif. Data perangkat disimpan sebagai data awal cloud.');
+  }
+ }catch(e){authMessage('Gagal memuat data cloud: '+(e.message||'periksa koneksi dan izin database'),true)}
+}
+async function handleSession(session){
+ currentUser=session?.user||null;
+ $('auth-signin').hidden=!!currentUser;$('auth-signup').hidden=!!currentUser;$('auth-signout').hidden=!currentUser;
+ $('auth-email').disabled=!!currentUser;$('auth-password').disabled=!!currentUser;
+ if(currentUser){authMessage('Login sebagai '+currentUser.email+' • memuat data cloud…');await loadCloud()}
+ else authMessage('Belum masuk. Data masih disimpan di perangkat ini.');
+}
 
 const navButtons=[...document.querySelectorAll('#app-nav button')];
 const mainItems=[...document.querySelector('main').children];
