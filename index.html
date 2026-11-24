@@ -130,7 +130,7 @@ a{color:#8ebaff}
 <p class="note" id="ema-time">Menggunakan candle 15 menit yang sudah ditutup dari Bitunix. Analisis informatif untuk simulasi; bukan sinyal terjamin dan tidak mengirim order.</p>
 </section>
 <section class="card"><h2>Backtesting strategi — BTCUSDT 15 menit</h2>
-<p class="note">Backtest candle tertutup Bitunix dengan entry pada open candle berikutnya. SL = 1,5 × ATR(14), TP = 2R. Jika SL dan TP tersentuh dalam candle sama, SL dianggap lebih dahulu. Biaya dan slippage dapat disetel di bawah; funding, spread tambahan, leverage, dan pembulatan kontrak belum dimodelkan.</p>
+<p class="note">Backtest candle tertutup Bitunix dengan filter tren EMA 50/200 dan entry pada open candle berikutnya. Sinyal cepat EMA 9/21, RSI 14, MACD harus searah filter tren. SL = 1,5 × ATR(14), TP = 2R. Jika SL dan TP tersentuh dalam candle sama, SL dianggap lebih dahulu. Biaya dan slippage dapat disetel di bawah; funding, spread tambahan, leverage, dan pembulatan kontrak belum dimodelkan.</p>
 <div class="row">
  <div class="field"><label for="bt-interval">Timeframe</label><select id="bt-interval"><option value="5m">5 menit</option><option value="15m" selected>15 menit</option><option value="1h">1 jam</option></select></div>
  <div class="field"><label for="bt-count">Jumlah candle</label><select id="bt-count"><option value="1000">1.000 candle</option><option value="5000">5.000 candle</option></select></div>
@@ -312,12 +312,12 @@ async function runBacktest(){const btn=$('run-backtest'),status=$('bt-status');b
  const n=candles.length,closes=candles.map(c=>Number(c.close)),highs=candles.map(c=>Number(c.high)),lows=candles.map(c=>Number(c.low));
  function ema(values,p){const k=2/(p+1),out=Array(values.length).fill(null);if(values.length<p)return out;let v=values.slice(0,p).reduce((a,b)=>a+b,0)/p;out[p-1]=v;for(let i=p;i<values.length;i++){v=values[i]*k+v*(1-k);out[i]=v}return out}
  function rsiSeries(values,p){const out=Array(values.length).fill(null);if(values.length<=p)return out;let g=0,l=0;for(let i=1;i<=p;i++){const d=values[i]-values[i-1];g+=Math.max(d,0);l+=Math.max(-d,0)}let ag=g/p,al=l/p;out[p]=al===0?100:100-100/(1+ag/al);for(let i=p+1;i<values.length;i++){const d=values[i]-values[i-1];ag=(ag*(p-1)+Math.max(d,0))/p;al=(al*(p-1)+Math.max(-d,0))/p;out[i]=al===0?100:100-100/(1+ag/al)}return out}
- const e9=ema(closes,9),e21=ema(closes,21),e12=ema(closes,12),e26=ema(closes,26),macd=closes.map((_,i)=>e12[i]===null||e26[i]===null?null:e12[i]-e26[i]),macdVals=macd.filter(v=>v!==null),sigVals=ema(macdVals,9),signal=Array(n).fill(null);let k=0;for(let i=0;i<n;i++)if(macd[i]!==null)signal[i]=sigVals[k++];
+ const e9=ema(closes,9),e21=ema(closes,21),e50=ema(closes,50),e200=ema(closes,200),e12=ema(closes,12),e26=ema(closes,26),macd=closes.map((_,i)=>e12[i]===null||e26[i]===null?null:e12[i]-e26[i]),macdVals=macd.filter(v=>v!==null),sigVals=ema(macdVals,9),signal=Array(n).fill(null);let k=0;for(let i=0;i<n;i++)if(macd[i]!==null)signal[i]=sigVals[k++];
  const rsis=rsiSeries(closes,14),atr=Array(n).fill(null);let trSum=0;for(let i=0;i<n;i++){const prev=i?closes[i-1]:closes[i],tr=Math.max(highs[i]-lows[i],Math.abs(highs[i]-prev),Math.abs(lows[i]-prev));if(i<14){trSum+=tr;if(i===13)atr[i]=trSum/14}else atr[i]=(atr[i-1]*13+tr)/14}
- let equity=Math.max(1,Number($('capital').value)||50),peak=equity,maxDD=0,grossWin=0,grossLoss=0,wins=0,tradeList=[],equityCurve=[equity],totalCosts=0,i=40;
+ let equity=Math.max(1,Number($('capital').value)||50),peak=equity,maxDD=0,grossWin=0,grossLoss=0,wins=0,tradeList=[],equityCurve=[equity],totalCosts=0,i=200;
  const startCapital=equity,riskPct=Math.min(2,Math.max(.1,Number($('risk').value)||1))/100;
- while(i<n-1&&equity>0){const valid=[e9[i],e21[i],rsis[i],macd[i],signal[i],atr[i]].every(v=>v!==null&&Number.isFinite(v));if(!valid){i++;continue}
- const buy=e9[i]>e21[i]&&rsis[i]>50&&rsis[i]<70&&macd[i]>signal[i],sell=e9[i]<e21[i]&&rsis[i]<50&&rsis[i]>30&&macd[i]<signal[i];if(!buy&&!sell){i++;continue}
+ while(i<n-1&&equity>0){const valid=[e9[i],e21[i],e50[i],e200[i],rsis[i],macd[i],signal[i],atr[i]].every(v=>v!==null&&Number.isFinite(v));if(!valid){i++;continue}
+ const buy=e9[i]>e21[i]&&e50[i]>e200[i]&&closes[i]>e200[i]&&rsis[i]>50&&rsis[i]<70&&macd[i]>signal[i],sell=e9[i]<e21[i]&&e50[i]<e200[i]&&closes[i]<e200[i]&&rsis[i]<50&&rsis[i]>30&&macd[i]<signal[i];if(!buy&&!sell){i++;continue}
  const side=buy?'BUY':'SELL',entry=Number(candles[i+1].open),dist=atr[i]*1.5;if(!(entry>0&&dist>0)){i++;continue}
  const sl=buy?entry-dist:entry+dist,tp=buy?entry+dist*2:entry-dist*2,riskMoney=equity*riskPct,qty=riskMoney/(dist+(entry+sl)*costRate);
  let exit=Number(candles[n-1].close),exitIndex=n-1,reason='Akhir data';
