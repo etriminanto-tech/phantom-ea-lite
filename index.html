@@ -248,7 +248,7 @@ const mainItems=[...document.querySelector('main').children];
 mainItems.forEach((node,index)=>{
  const heading=node.querySelector('h2')?.textContent?.toLowerCase()||'';
  let page='settings';
- if(index===0||heading.includes('hasil audit'))page='dashboard';
+ if(index===0||heading.includes('hasil audit')||heading.includes('perintah otomatis'))page='dashboard';
  else if(heading.includes('data pasar'))page='market';
  else if(heading.includes('analisis ema')||heading.includes('backtesting'))page='strategy';
  else if(heading.includes('catat transaksi')||heading.includes('riwayat simulasi'))page='history';
