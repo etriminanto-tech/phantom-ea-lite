@@ -11,7 +11,7 @@ import android.widget.TextView;
 import android.widget.FrameLayout;
 
 public class MainActivity extends Activity {
-    private static final String APP_URL = "https://etriminanto-tech.github.io/phantom-ea-lite/";
+    private static final String APP_URL = "https://phantom-ea-lite.vercel.app/";
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         FrameLayout root = new FrameLayout(this);
