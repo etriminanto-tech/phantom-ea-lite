@@ -15,6 +15,7 @@ function authorized(request, env) {
   return Boolean(env.CONTROL_TOKEN && request.headers.get("authorization") === `Bearer ${env.CONTROL_TOKEN}`);
 }
 function num(v) { const n = Number(v); return Number.isFinite(n) ? n : NaN; }
+function timeValue(v) { const n = Number(v); return Number.isFinite(n) ? n : Date.parse(v); }
 function keyFor(market) { return `phantom-${market}-state-v1`; }
 function freshState(market) {
   return { marketType: market, enabled: false, initialCash: START_BALANCE, cash: START_BALANCE,
@@ -61,7 +62,7 @@ async function getCandles(market) {
     open: num(c.open), high: num(c.high), low: num(c.low), close: num(c.close),
     ts: c.time ?? c.ts ?? c.timestamp
   })).filter(c => [c.open, c.high, c.low, c.close].every(Number.isFinite))
-    .sort((a, b) => Number(a.ts) - Number(b.ts));
+    .sort((a, b) => timeValue(a.ts) - timeValue(b.ts));
   if (candles.length < 200) throw new Error(`Data candle ${market} valid kurang dari 200`);
   return candles;
 }
