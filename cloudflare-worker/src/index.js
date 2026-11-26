@@ -6,9 +6,16 @@ const FEE_FUTURES = 0.0006;
 const START_BALANCE = 50;
 const LEVERAGE = 1;
 
-function json(data, status = 200) {
+function json(data, status = 200, origin = "*") {
   return new Response(JSON.stringify(data), {
-    status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
+    status, headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "access-control-allow-origin": origin,
+      "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-headers": "Authorization, Content-Type",
+      "vary": "Origin"
+    }
   });
 }
 function authorized(request, env) {
@@ -171,26 +178,34 @@ async function cycle(market, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (!authorized(request, env)) return json({ ok: false, error: "Unauthorized" }, 401);
+    const origin = request.headers.get("origin") || "*";
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: {
+      "access-control-allow-origin": origin,
+      "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-headers": "Authorization, Content-Type",
+      "access-control-max-age": "86400",
+      "vary": "Origin"
+    }});
+    if (!authorized(request, env)) return json({ ok: false, error: "Unauthorized" }, 401, origin);
     if (request.method === "GET" && url.pathname === "/status") {
       const spot = await env.STATE.get(keyFor("spot"), "json") || freshState("spot");
       const futures = await env.STATE.get(keyFor("futures"), "json") || freshState("futures");
-      return json({ ok: true, mode: "PAPER_TRADING_ONLY", spot, futures });
+      return json({ ok: true, mode: "PAPER_TRADING_ONLY", spot, futures }, 200, origin);
     }
     if (request.method === "POST" && url.pathname === "/command") {
       let body;
-      try { body = await request.json(); } catch { return json({ ok: false, error: "Invalid JSON" }, 400); }
+      try { body = await request.json(); } catch { return json({ ok: false, error: "Invalid JSON" }, 400, origin); }
       const market = body.market === "futures" ? "futures" : body.market === "spot" ? "spot" : null;
-      if (!market) return json({ ok: false, error: "market must be spot or futures" }, 400);
+      if (!market) return json({ ok: false, error: "market must be spot or futures" }, 400, origin);
       const key = keyFor(market), state = await env.STATE.get(key, "json") || freshState(market);
       if (body.command === "start") { state.enabled = true; state.status = "Menunggu siklus Cron berikutnya"; }
       else if (body.command === "stop") { state.enabled = false; state.status = "Dihentikan"; }
       else if (body.command === "reset") Object.assign(state, freshState(market), { status: "Reset • berhenti" });
-      else return json({ ok: false, error: "command must be start, stop, or reset" }, 400);
+      else return json({ ok: false, error: "command must be start, stop, or reset" }, 400, origin);
       await env.STATE.put(key, JSON.stringify(state));
-      return json({ ok: true, mode: "PAPER_TRADING_ONLY", state });
+      return json({ ok: true, mode: "PAPER_TRADING_ONLY", state }, 200, origin);
     }
-    return json({ ok: false, error: "Not found" }, 404);
+    return json({ ok: false, error: "Not found" }, 404, origin);
   },
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(Promise.all(["spot", "futures"].map(market =>
