@@ -17,8 +17,9 @@
 Every request requires `Authorization: Bearer YOUR_CONTROL_TOKEN`.
 
 - `GET /status` — both Spot and Futures states.
-- `POST /command` JSON `{"market":"spot","command":"start"}`
-- `POST /command` JSON `{"market":"futures","command":"start"}`
+- `POST /command` JSON `{"market":"spot","command":"start","marginMode":"managed"}`
+- `POST /command` JSON `{"market":"futures","command":"start","marginMode":"managed"}`
+- Set `marginMode` to `full` to use nearly all available virtual Spot cash or 95% of virtual Futures cash as margin. This mode is for paper simulation only; it is substantially riskier than managed mode.
 - Stop either independently using `{"market":"futures","command":"stop"}` (or spot).
 - Reset either independently using `{"market":"futures","command":"reset"}` (or spot).
 
@@ -47,5 +48,7 @@ Both use BTCUSDT 5-minute candles, EMA50/EMA200, RSI14, 15-candle ATR, and recen
 - The Spot and Futures balances are independent virtual balances, not the Bitunix exchange demo account.
 - Cloudflare Workers Free currently documents 100,000 requests/day and a 10 ms CPU limit per Cron invocation. The schedule is 288 invocations/day; the two market cycles are executed in the same scheduled event. Provider quotas and Bitunix API availability may interrupt runs.
 - Free services have no uptime SLA. Logs and quota should be checked regularly.
-- This Worker is a backend scaffold. The Android interface is not yet connected to these endpoints and no APK has been built.
-- Keep CONTROL_TOKEN private. Never put it in public source code, chat, or a client-side APK.
+- The web interface contains controls for these endpoints, but they remain unusable until this Worker is deployed, the KV namespace is configured, and the Worker URL plus control token are entered in the app.
+- The current client stores the control token in device-local browser storage. This is acceptable only for a private test device, not a production multi-user deployment. Do not reuse this token elsewhere; a production design should put authenticated users behind a server-side proxy instead of shipping a shared bearer token in the APK.
+- Android APK generation is handled by GitHub Actions. A successful web deployment does not prove that the APK build succeeded; verify the workflow artifact separately.
+- Keep CONTROL_TOKEN private. Never put it in public source code, chat, or screenshots.
