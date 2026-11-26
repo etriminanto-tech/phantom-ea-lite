@@ -10,7 +10,7 @@ import android.view.View;
 import android.widget.FrameLayout;
 
 public class MainActivity extends Activity {
-    private static final String APP_URL = "https://phantom-ea-lite.vercel.app/";
+    private static final String APP_URL = "https://phantom-ea-lite-git-bitunix-spot-demo-egiant.vercel.app/";
     private WebView webView;
 
     @Override public void onCreate(Bundle state) {
@@ -22,8 +22,11 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setLoadsImagesAutomatically(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setSupportMultipleWindows(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         webView.setWebViewClient(new WebViewClient());
+        webView.setBackgroundColor(0xFF080E19);
         webView.setWebChromeClient(new WebChromeClient());
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
