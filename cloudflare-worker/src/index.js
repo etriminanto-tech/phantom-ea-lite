@@ -25,7 +25,7 @@ function num(v) { const n = Number(v); return Number.isFinite(n) ? n : NaN; }
 function timeValue(v) { const n = Number(v); return Number.isFinite(n) ? n : Date.parse(v); }
 function keyFor(market) { return `phantom-${market}-state-v1`; }
 function freshState(market) {
-  return { marketType: market, enabled: false, initialCash: START_BALANCE, cash: START_BALANCE,
+  return { marketType: market, enabled: false, marginMode: "managed", initialCash: START_BALANCE, cash: START_BALANCE,
     equity: START_BALANCE, leverage: market === "futures" ? LEVERAGE : null,
     position: null, trades: [], lastCandle: null, lastRun: null, status: "Berhenti" };
 }
@@ -109,7 +109,9 @@ async function cycle(market, env) {
       } else event = "Posisi Spot BUY virtual masih terbuka";
     } else if (state.lastCandle !== candleKey && fast > slow && price > fast && strength >= 50 && strength <= 68) {
       const riskBudget = state.cash * 0.01, stopDistance = atr * 1.5;
-      const qty = Math.min(riskBudget / stopDistance, state.cash / (price * (1 + FEE_SPOT)));
+      const managedQty = Math.min(riskBudget / stopDistance, state.cash / (price * (1 + FEE_SPOT)));
+      const fullMarginQty = state.cash / (price * (1 + FEE_SPOT));
+      const qty = state.marginMode === "full" ? fullMarginQty : managedQty;
       if (qty > 0 && qty * price >= 1) {
         const cost = qty * price, fee = cost * FEE_SPOT;
         state.cash -= cost + fee;
@@ -149,7 +151,9 @@ async function cycle(market, env) {
         const stopDistance = atr * 1.5, riskBudget = state.cash * 0.01;
         const qtyByRisk = riskBudget / stopDistance;
         const qtyByMarginCap = (state.cash * 0.25 * LEVERAGE) / price;
-        const qty = Math.min(qtyByRisk, qtyByMarginCap);
+        const managedQty = Math.min(qtyByRisk, qtyByMarginCap);
+        const fullMarginQty = (state.cash * 0.95 * LEVERAGE) / price;
+        const qty = state.marginMode === "full" ? fullMarginQty : managedQty;
         const notional = qty * price, margin = notional / LEVERAGE;
         const entryFee = notional * FEE_FUTURES;
         if (qty > 0 && notional >= 1 && margin + entryFee <= state.cash) {
@@ -198,7 +202,11 @@ export default {
       const market = body.market === "futures" ? "futures" : body.market === "spot" ? "spot" : null;
       if (!market) return json({ ok: false, error: "market must be spot or futures" }, 400, origin);
       const key = keyFor(market), state = await env.STATE.get(key, "json") || freshState(market);
-      if (body.command === "start") { state.enabled = true; state.status = "Menunggu siklus Cron berikutnya"; }
+      if (body.command === "start") {
+        state.marginMode = body.marginMode === "full" ? "full" : "managed";
+        state.enabled = true;
+        state.status = state.marginMode === "full" ? "AI Full Margin • simulasi saja" : "AI Margin Management • simulasi saja";
+      }
       else if (body.command === "stop") { state.enabled = false; state.status = "Dihentikan"; }
       else if (body.command === "reset") Object.assign(state, freshState(market), { status: "Reset • berhenti" });
       else return json({ ok: false, error: "command must be start, stop, or reset" }, 400, origin);
