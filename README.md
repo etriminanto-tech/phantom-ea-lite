@@ -7,7 +7,7 @@ Aplikasi web/PWA berbahasa Indonesia untuk analisis pasar, simulasi trading, pen
 - Dashboard responsif untuk Android dan desktop melalui HTTPS.
 - Pusat perintah Android: perintah teks untuk mengambil harga BTCUSDT, menjalankan analisis indikator, dan memulai/menghentikan pemantauan berkala.
 - Pemantauan otomatis memperbarui data setiap 60 detik selama PWA tetap terbuka di layar; pemantauan berhenti saat pengguna menghentikannya atau aplikasi ditutup.
-- Antarmuka dapat dipaketkan sebagai APK Android melalui Capacitor dan GitHub Actions; APK debug belum dinyatakan siap sampai workflow berhasil.
+- Aplikasi Android native menggunakan Java WebView dan dibangun sebagai APK debug melalui GitHub Actions; APK belum dinyatakan siap sampai workflow berhasil.
 - Modal simulasi awal 50 USDT; risiko awal 1% per transaksi (pengaturan dibatasi 0,1–2%).
 - Instrumen kalkulator/simulasi: EURUSD, XAUUSD, BTCUSDT.
 - Pencatatan transaksi simulasi; data lokal tersimpan di browser.
@@ -25,7 +25,7 @@ Backtest di aplikasi dan audit CI adalah simulasi historis, bukan jaminan hasil 
 
 ## Arsitektur
 
-- Frontend: `index.html`, `manifest.json`, `sw.js`, `icon.svg`; Android wrapper: Capacitor (`capacitor.config.json`, `scripts/prepare-web.mjs`).
+- Frontend: `index.html`, `manifest.json`, `sw.js`, `icon.svg`; Android wrapper: `android/` native Java WebView app.
 - Market proxy: `api/market.js` (Futures) dan `api/spot-market.js` (Spot) pada Vercel.
 - Cloud paper engine: `cloudflare-worker/src/index.js` untuk Spot dan Futures terpisah; tombol kontrol tersedia di Pengaturan aplikasi.
 - Android build: `.github/workflows/android-apk.yml`; lihat `ANDROID-APK.md`.
@@ -38,7 +38,7 @@ Backtest di aplikasi dan audit CI adalah simulasi historis, bukan jaminan hasil 
 - Tidak ada eksekusi order Bitunix, baik demo maupun live.
 - Ketersediaan demo di aplikasi Bitunix tidak berarti tersedia API order demo eksternal. Jangan menganggap endpoint market publik sebagai koneksi trading.
 - Belum ada Expert Advisor MT5/bridge Windows atau VPS.
-- Proyek kini memiliki pembungkus Capacitor dan workflow build APK debug; APK belum diverifikasi/ditandatangani sebagai rilis Play Store.
+- Proyek kini memiliki aplikasi Android Java WebView dan workflow build APK debug; APK belum diverifikasi/ditandatangani sebagai rilis Play Store.
 - Email pemulihan password memerlukan SMTP/domain terverifikasi agar pengiriman dapat diandalkan.
 - Sinkronisasi cloud harus tetap diuji dengan sesi pengguna dan pemeriksaan RLS; keberhasilan satu sesi bukan jaminan untuk semua kondisi jaringan/perangkat.
 - Strategi belum lolos audit profitabilitas; live trading dinonaktifkan/tidak disediakan.
