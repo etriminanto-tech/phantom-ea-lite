@@ -54,17 +54,20 @@ function rsi(values, period = 14) {
 async function getCandles(market) {
   const futures = market === "futures";
   const base = futures ? BASE_FUTURES : BASE_SPOT;
-  const path = futures ? "/api/v1/futures/market/kline" : "/api/spot/v1/market/kline";
+  // Futures K-lines support limit=200 and 5m intervals. Spot history
+  // uses a separate endpoint, limit up to 500, and endTime in seconds.
+  const path = futures ? "/api/v1/futures/market/kline" : "/api/spot/v1/market/kline/history";
   const url = new URL(path, base);
   url.searchParams.set("symbol", SYMBOL);
-  url.searchParams.set("interval", "5m" && futures ? "5m" : "5");
+  url.searchParams.set("interval", futures ? "5m" : "5");
   url.searchParams.set("limit", "200");
+  if (!futures) url.searchParams.set("endTime", String(Math.floor(Date.now() / 1000)));
   if (futures) url.searchParams.set("type", "MARK_PRICE");
   const response = await fetch(url, { headers: { accept: "application/json" } });
   if (!response.ok) throw new Error(`Bitunix ${market} HTTP ${response.status}`);
   const body = await response.json();
   if (Number(body.code) !== 0) throw new Error(body.msg || `Bitunix ${market} API error`);
-  const rows = Array.isArray(body.data) ? body.data : (body.data?.list || body.data?.data || []);
+  const rows = Array.isArray(body.data) ? body.data : (Array.isArray(body.data?.list) ? body.data.list : (Array.isArray(body.data?.data) ? body.data.data : (body.data && typeof body.data === "object" && body.data.close != null ? [body.data] : [])));
   const candles = rows.map(c => ({
     open: num(c.open), high: num(c.high), low: num(c.low), close: num(c.close),
     ts: c.time ?? c.ts ?? c.timestamp
