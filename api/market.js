@@ -1,4 +1,9 @@
 export default async function handler(req, res) {
+  // Public market data only; allow the native Capacitor WebView to read this endpoint.
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(204).end();
   res.setHeader("Cache-Control", "s-maxage=5, stale-while-revalidate=10");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   if (req.method !== "GET") {
