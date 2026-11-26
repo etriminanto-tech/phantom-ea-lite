@@ -1,0 +1,13 @@
+name = "phantom-ea-lite-spot-futures"
+main = "src/index.js"
+compatibility_date = "2026-11-27"
+
+[[kv_namespaces]]
+binding = "STATE"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Set the control token separately:
+# npx wrangler secret put CONTROL_TOKEN
