@@ -1,6 +1,11 @@
-# Phantom EA Lite Android wrapper
+# Phantom EA Lite Android app
 
-This Android app is a WebView wrapper for the independently developed Phantom EA Lite web app.
-It loads the GitHub Pages URL configured in MainActivity. It is not an MT5 Expert Advisor and does not place Bitunix orders.
-The APK build is produced by GitHub Actions as a debug APK. A debug APK is suitable for controlled installation/testing, not Play Store release.
-The hosted app and API endpoints must be deployed and checked separately.
+This repository contains an installable Android APK project. The current Android shell is a WebView-based hybrid app that loads the Phantom EA Lite interface from:
+
+`https://phantom-ea-lite.vercel.app/`
+
+It is an Android package, but the interface and market API still depend on the hosted Vercel service and an internet connection. It is not a fully native Android trading engine.
+
+GitHub Actions builds a debug APK at `android/app/build/outputs/apk/debug/app-debug.apk` and uploads it as the `Phantom-EA-Lite-Android-debug` workflow artifact.
+
+The current implementation reads public Bitunix Futures market data and supports local paper-trading simulation only. It does not send orders to Bitunix and does not connect to an MT5 terminal or Expert Advisor. A successful APK build does not, by itself, prove the hosted service or in-app market commands work.
