@@ -203,11 +203,13 @@ a{color:#8ebaff}
 <div class="buttons"><button class="primary" id="cloud-save">Simpan koneksi</button><button id="cloud-refresh">Periksa status</button></div>
 <div class="card" style="margin-top:12px;background:#0d1929">
 <h2>Spot — akun virtual 50 USDT</h2>
+<div class="field"><label for="spot-margin-mode">Mode AI Spot</label><select id="spot-margin-mode"><option value="managed" selected>AI Margin Management — risiko terukur</option><option value="full">AI Full Margin — gunakan seluruh saldo virtual</option></select></div>
 <p class="note" id="cloud-spot-status">Belum terhubung.</p>
 <div class="buttons"><button class="primary" id="spot-start">Mulai Spot</button><button id="spot-stop">Hentikan Spot</button><button id="spot-reset">Reset Spot</button></div>
 </div>
 <div class="card" style="margin-top:12px;background:#0d1929">
 <h2>Futures — akun virtual 50 USDT</h2>
+<div class="field"><label for="futures-margin-mode">Mode AI Futures</label><select id="futures-margin-mode"><option value="managed" selected>AI Margin Management — risiko terukur</option><option value="full">AI Full Margin — gunakan seluruh margin virtual</option></select></div>
 <p class="note" id="cloud-futures-status">Belum terhubung.</p>
 <div class="buttons"><button class="primary" id="futures-start">Mulai Futures</button><button id="futures-stop">Hentikan Futures</button><button id="futures-reset">Reset Futures</button></div>
 </div>
@@ -505,7 +507,7 @@ if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.s
   catch(e){setMsg('cloud-connection-status','Koneksi gagal: '+e.message,true)}
  }
  async function command(market,command){
-  try{const d=await callWorker('/command','POST',{market,command});setMsg('cloud-connection-status',market.toUpperCase()+' '+command+' diterima cloud. Memperbarui status…');await refresh()}
+  try{const mode=$(market+'-margin-mode')?.value||'managed';const d=await callWorker('/command','POST',{market,command,marginMode:mode});setMsg('cloud-connection-status',market.toUpperCase()+' '+command+' diterima cloud. Memperbarui status…');await refresh()}
   catch(e){setMsg('cloud-connection-status','Perintah gagal: '+e.message,true)}
  }
  $('cloud-save').addEventListener('click',()=>{if(saveConfig())refresh()});
