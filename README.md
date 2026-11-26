@@ -7,7 +7,7 @@ Aplikasi web/PWA berbahasa Indonesia untuk analisis pasar, simulasi trading, pen
 - Dashboard responsif untuk Android dan desktop melalui HTTPS.
 - Pusat perintah Android: perintah teks untuk mengambil harga BTCUSDT, menjalankan analisis indikator, dan memulai/menghentikan pemantauan berkala.
 - Pemantauan otomatis memperbarui data setiap 60 detik selama PWA tetap terbuka di layar; pemantauan berhenti saat pengguna menghentikannya atau aplikasi ditutup.
-- PWA dapat ditambahkan ke layar utama Android dari browser yang mendukung instalasi.
+- Antarmuka dapat dipaketkan sebagai APK Android melalui Capacitor dan GitHub Actions; APK debug belum dinyatakan siap sampai workflow berhasil.
 - Modal simulasi awal 50 USDT; risiko awal 1% per transaksi (pengaturan dibatasi 0,1–2%).
 - Instrumen kalkulator/simulasi: EURUSD, XAUUSD, BTCUSDT.
 - Pencatatan transaksi simulasi; data lokal tersimpan di browser.
@@ -25,8 +25,10 @@ Backtest di aplikasi dan audit CI adalah simulasi historis, bukan jaminan hasil 
 
 ## Arsitektur
 
-- Frontend: `index.html`, `manifest.json`, `sw.js`, `icon.svg`.
-- Market proxy: `api/market.js` pada Vercel.
+- Frontend: `index.html`, `manifest.json`, `sw.js`, `icon.svg`; Android wrapper: Capacitor (`capacitor.config.json`, `scripts/prepare-web.mjs`).
+- Market proxy: `api/market.js` (Futures) dan `api/spot-market.js` (Spot) pada Vercel.
+- Cloud paper engine: `cloudflare-worker/src/index.js` untuk Spot dan Futures terpisah; tombol kontrol tersedia di Pengaturan aplikasi.
+- Android build: `.github/workflows/android-apk.yml`; lihat `ANDROID-APK.md`.
 - Cloud state: Supabase Auth dan tabel `public.user_app_state`.
 - RLS pada tabel pengguna menggunakan `auth.uid() = user_id`.
 - Tidak ada API key Bitunix di frontend; endpoint market saat ini tidak menerima kredensial dan tidak memiliki endpoint order.
@@ -36,7 +38,7 @@ Backtest di aplikasi dan audit CI adalah simulasi historis, bukan jaminan hasil 
 - Tidak ada eksekusi order Bitunix, baik demo maupun live.
 - Ketersediaan demo di aplikasi Bitunix tidak berarti tersedia API order demo eksternal. Jangan menganggap endpoint market publik sebagai koneksi trading.
 - Belum ada Expert Advisor MT5/bridge Windows atau VPS.
-- Aplikasi saat ini adalah PWA, bukan APK Android native.
+- Proyek kini memiliki pembungkus Capacitor dan workflow build APK debug; APK belum diverifikasi/ditandatangani sebagai rilis Play Store.
 - Email pemulihan password memerlukan SMTP/domain terverifikasi agar pengiriman dapat diandalkan.
 - Sinkronisasi cloud harus tetap diuji dengan sesi pengguna dan pemeriksaan RLS; keberhasilan satu sesi bukan jaminan untuk semua kondisi jaringan/perangkat.
 - Strategi belum lolos audit profitabilitas; live trading dinonaktifkan/tidak disediakan.
@@ -68,3 +70,12 @@ Proxy mengacu pada dokumentasi resmi Bitunix Futures market:
 - https://www.bitunix.com/api-docs/futures/market/get_tickers.html
 
 Endpoint ini hanya untuk data publik read-only. Tidak boleh digunakan sebagai bukti bahwa order trading otomatis telah tersedia.
+
+
+## Android APK build
+
+The `bitunix-spot-demo` branch includes a Capacitor Android wrapper and a GitHub Actions workflow. On a successful workflow run, download the `phantom-ea-lite-android-debug-apk` artifact. The debug APK is sideloadable but is not a Play Store release. See [ANDROID-APK.md](./ANDROID-APK.md).
+
+## Cloud Spot and Futures controls
+
+The settings screen includes independent start/stop/reset controls for Spot and Futures. Configure the deployed Cloudflare Worker URL and private control token there. Each market uses a separate virtual 50 USDT account. The Worker has a five-minute Cron schedule and is limited by Cloudflare Free quotas. It does not submit Bitunix orders.
