@@ -1,9 +1,0 @@
-{
-  "appId": "com.phantomealite.mobile",
-  "appName": "Phantom EA Lite",
-  "webDir": "www",
-  "bundledWebRuntime": false,
-  "android": {
-    "allowMixedContent": false
-  }
-}
